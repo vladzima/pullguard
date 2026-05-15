@@ -20,6 +20,7 @@ describe("shouldRunForTrigger", () => {
         mode: "always",
         label: "run-pullguard",
         comment: "/pullguard",
+        allowCommentOverrides: true,
         allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
       }
     );
@@ -43,6 +44,7 @@ describe("shouldRunForTrigger", () => {
         mode: "label",
         label: "run-pullguard",
         comment: "/pullguard",
+        allowCommentOverrides: true,
         allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
       }
     );
@@ -58,7 +60,7 @@ describe("shouldRunForTrigger", () => {
           action: "created",
           issue: { pull_request: {} },
           comment: {
-            body: "please /pullguard this",
+            body: "/pullguard --depth pr",
             author_association: "COLLABORATOR"
           }
         }
@@ -67,11 +69,15 @@ describe("shouldRunForTrigger", () => {
         mode: "comment",
         label: "run-pullguard",
         comment: "/pullguard",
+        allowCommentOverrides: true,
         allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
       }
     );
 
-    expect(decision).toEqual({ shouldRun: true });
+    expect(decision).toEqual({
+      shouldRun: true,
+      commentCommand: "/pullguard --depth pr"
+    });
   });
 
   it("blocks comment trigger from untrusted users", () => {
@@ -91,6 +97,7 @@ describe("shouldRunForTrigger", () => {
         mode: "comment",
         label: "run-pullguard",
         comment: "/pullguard",
+        allowCommentOverrides: true,
         allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
       }
     );

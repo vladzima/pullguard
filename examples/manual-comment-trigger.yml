@@ -3,7 +3,7 @@ model:
   name: gpt-5.4-mini-2026-03-17
 
 trigger:
-  mode: always
+  mode: comment
   label: run-pullguard
   comment: /pullguard
   allowCommentOverrides: true
@@ -23,7 +23,6 @@ analysis:
 actions:
   comment:
     enabled: true
-
   labels:
     enabled: true
     rules:
@@ -31,7 +30,6 @@ actions:
         label: needs-human-review
       - threshold: 80
         label: high-risk-pr
-
   close:
     enabled: false
     threshold: 95

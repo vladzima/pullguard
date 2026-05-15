@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 import { decideActions } from "./actions.js";
 import { analyzePullRequest } from "./analyze.js";
+import { applyCommentOverrides, parseCommentCommand } from "./comment-command.js";
 import { parsePolicyConfig, mergeModelOverride } from "./config.js";
 import { applyDecision, getPullRequestContext } from "./github.js";
 import { shouldRunForTrigger } from "./trigger.js";
@@ -16,7 +17,7 @@ export async function run(): Promise<void> {
   const modelOverride = core.getInput("model");
   const providerOverride = parseProviderInput(core.getInput("provider"));
 
-  const config = mergeModelOverride(
+  const baseConfig = mergeModelOverride(
     parsePolicyConfig(await readConfig(configPath)),
     modelOverride,
     providerOverride || undefined
@@ -26,7 +27,7 @@ export async function run(): Promise<void> {
       eventName: github.context.eventName,
       payload: github.context.payload as Record<string, unknown>
     },
-    config.trigger
+    baseConfig.trigger
   );
 
   if (!trigger.shouldRun) {
@@ -35,6 +36,10 @@ export async function run(): Promise<void> {
     return;
   }
 
+  const config = applyCommentOverrides(
+    baseConfig,
+    trigger.commentCommand ? parseCommentCommand(trigger.commentCommand) : undefined
+  );
   const octokit = github.getOctokit(token);
   const pr = await getPullRequestContext(octokit, config.analysis);
   const result = await analyzePullRequest({

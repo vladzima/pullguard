@@ -6,11 +6,7 @@ trigger:
   mode: always
   label: run-pullguard
   comment: /pullguard
-  allowCommentOverrides: true
-  allowedCommentAuthorAssociations:
-    - OWNER
-    - MEMBER
-    - COLLABORATOR
+  allowCommentOverrides: false
 
 analysis:
   depth: pr
@@ -22,16 +18,9 @@ analysis:
 
 actions:
   comment:
-    enabled: true
-
+    enabled: false
   labels:
-    enabled: true
-    rules:
-      - threshold: 60
-        label: needs-human-review
-      - threshold: 80
-        label: high-risk-pr
-
+    enabled: false
   close:
     enabled: false
     threshold: 95

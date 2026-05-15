@@ -6,6 +6,19 @@ It does not try to prove a PR was AI-generated. It flags review-risk patterns th
 
 ## Install
 
+Fastest path:
+
+```bash
+npx pullguard init
+```
+
+The CLI writes:
+
+- `.github/workflows/pullguard.yml`
+- `.github/pullguard.yml`
+
+Manual setup:
+
 Create `.github/workflows/pullguard.yml`:
 
 ```yaml
@@ -44,6 +57,11 @@ trigger:
   mode: always
   label: run-pullguard
   comment: /pullguard
+  allowCommentOverrides: true
+  allowedCommentAuthorAssociations:
+    - OWNER
+    - MEMBER
+    - COLLABORATOR
 
 analysis:
   depth: pr
@@ -69,6 +87,21 @@ actions:
     enabled: false
     threshold: 95
 ```
+
+## Add Provider API Key
+
+PullGuard is BYOK. Add the selected provider key as a GitHub Actions secret:
+
+1. Open your GitHub repository.
+2. Go to `Settings -> Secrets and variables -> Actions`.
+3. Click `New repository secret`.
+4. Add one of:
+   - `OPENAI_API_KEY` for OpenAI
+   - `ANTHROPIC_API_KEY` for Anthropic
+5. Paste the API key as the secret value.
+6. Save the secret.
+
+The workflow can include both keys; PullGuard uses the provider selected in `.github/pullguard.yml`.
 
 ## Providers
 
@@ -133,6 +166,32 @@ trigger:
 With this config, a maintainer triggers review by commenting `/pullguard` on the PR.
 
 Comment triggers are restricted by `allowedCommentAuthorAssociations` so random commenters cannot spend the repository's BYOK credits. To use comment triggers, keep the `issue_comment` event in `.github/workflows/pullguard.yml`. To use label triggers, keep `labeled` in the `pull_request_target` event types.
+
+## Comment Arguments
+
+Trusted maintainers can override a single comment-triggered run:
+
+```text
+/pullguard --depth pr --comment --labels
+/pullguard --depth codebase --close 95
+/pullguard --provider anthropic --model claude-sonnet-4-20250514
+```
+
+Supported flags:
+
+- `--depth pr|codebase`
+- `--comment` / `--no-comment`
+- `--labels` / `--no-labels`
+- `--close <threshold>` / `--no-close`
+- `--provider openai|anthropic`
+- `--model <model-name>`
+
+Comment overrides apply only to that run. Disable them with:
+
+```yaml
+trigger:
+  allowCommentOverrides: false
+```
 
 ## Analysis Depth
 
@@ -209,3 +268,11 @@ Do not add a checkout of the pull request head to this workflow unless you fully
 - `labels`: comma-separated labels selected by policy
 - `should-close`: whether the policy selected the close action
 - `skipped`: whether the configured trigger did not match
+
+## Example Policies
+
+- `examples/always-comment.yml`: comment on every configured PR event.
+- `examples/manual-comment-trigger.yml`: run only when a maintainer comments `/pullguard`.
+- `examples/manual-label-trigger.yml`: run only when `run-pullguard` is applied.
+- `examples/observe-only.yml`: compute outputs without modifying PRs.
+- `examples/aggressive-close.yml`: codebase-aware analysis with close enabled at `95`.

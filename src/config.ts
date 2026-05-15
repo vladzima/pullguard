@@ -12,6 +12,7 @@ const defaultConfig: PolicyConfig = {
     mode: "always",
     label: "run-pullguard",
     comment: "/pullguard",
+    allowCommentOverrides: true,
     allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
   },
   analysis: {
@@ -50,6 +51,9 @@ const configSchema = z
         mode: z.enum(["always", "label", "comment"]).default(defaultConfig.trigger.mode),
         label: z.string().min(1).default(defaultConfig.trigger.label),
         comment: z.string().min(1).default(defaultConfig.trigger.comment),
+        allowCommentOverrides: z
+          .boolean()
+          .default(defaultConfig.trigger.allowCommentOverrides),
         allowedCommentAuthorAssociations: z
           .array(z.string().min(1))
           .default(defaultConfig.trigger.allowedCommentAuthorAssociations)

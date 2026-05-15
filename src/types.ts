@@ -9,6 +9,7 @@ export type TriggerConfig = {
   mode: TriggerMode;
   label: string;
   comment: string;
+  allowCommentOverrides: boolean;
   allowedCommentAuthorAssociations: string[];
 };
 

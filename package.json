@@ -1,13 +1,32 @@
 {
   "name": "pullguard",
-  "version": "0.3.0",
+  "version": "0.4.0",
+  "description": "BYOK pull request review-risk triage for open-source maintainers.",
   "type": "module",
+  "bin": {
+    "pullguard": "dist/cli/index.js"
+  },
+  "files": [
+    "action.yml",
+    "dist",
+    "examples",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
-    "bundle": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
+    "bundle": "ncc build src/index.ts -o dist --source-map --license licenses.txt && tsc -p tsconfig.cli.json",
     "test": "vitest run",
     "lint": "tsc --noEmit"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vladzima/pullguard.git"
+  },
+  "homepage": "https://github.com/vladzima/pullguard#readme",
+  "bugs": {
+    "url": "https://github.com/vladzima/pullguard/issues"
+  },
+  "license": "MIT",
   "engines": {
     "node": ">=20"
   },

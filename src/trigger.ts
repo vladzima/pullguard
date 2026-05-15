@@ -8,6 +8,7 @@ export type TriggerContext = {
 export type TriggerDecision = {
   shouldRun: boolean;
   reason?: string;
+  commentCommand?: string;
 };
 
 export function shouldRunForTrigger(
@@ -46,7 +47,8 @@ export function shouldRunForTrigger(
   }
 
   const body = getNestedString(context.payload, ["comment", "body"]) ?? "";
-  if (!body.includes(config.comment)) {
+  const commentCommand = findCommentCommand(body, config.comment);
+  if (!commentCommand) {
     return { shouldRun: false, reason: `Waiting for comment '${config.comment}'.` };
   }
 
@@ -65,7 +67,14 @@ export function shouldRunForTrigger(
     };
   }
 
-  return { shouldRun: true };
+  return { shouldRun: true, commentCommand };
+}
+
+function findCommentCommand(body: string, command: string): string | undefined {
+  return body
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line === command || line.startsWith(`${command} `));
 }
 
 function getNestedString(

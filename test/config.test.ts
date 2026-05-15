@@ -71,6 +71,7 @@ analysis:
       mode: "comment",
       label: "run-pullguard",
       comment: "/pullguard",
+      allowCommentOverrides: true,
       allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
     });
     expect(config.analysis).toEqual({

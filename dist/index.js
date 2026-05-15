@@ -45053,6 +45053,110 @@ async function analyze_analyzePullRequest(params) {
     });
 }
 
+;// CONCATENATED MODULE: ./src/comment-command.ts
+function parseCommentCommand(command) {
+    const tokens = command.trim().split(/\s+/);
+    if (tokens[0] !== "/pullguard") {
+        throw new Error("PullGuard comment command must start with /pullguard.");
+    }
+    const overrides = {};
+    for (let index = 1; index < tokens.length; index += 1) {
+        const token = tokens[index];
+        if (token === "--depth") {
+            const value = readValue(tokens, index, token);
+            if (value !== "pr" && value !== "codebase") {
+                throw new Error("--depth must be either 'pr' or 'codebase'.");
+            }
+            overrides.depth = value;
+            index += 1;
+            continue;
+        }
+        if (token === "--provider") {
+            const value = readValue(tokens, index, token);
+            if (value !== "openai" && value !== "anthropic") {
+                throw new Error("--provider must be either 'openai' or 'anthropic'.");
+            }
+            overrides.provider = value;
+            index += 1;
+            continue;
+        }
+        if (token === "--model") {
+            overrides.model = readValue(tokens, index, token);
+            index += 1;
+            continue;
+        }
+        if (token === "--comment") {
+            overrides.comment = true;
+            continue;
+        }
+        if (token === "--no-comment") {
+            overrides.comment = false;
+            continue;
+        }
+        if (token === "--labels") {
+            overrides.labels = true;
+            continue;
+        }
+        if (token === "--no-labels") {
+            overrides.labels = false;
+            continue;
+        }
+        if (token === "--close") {
+            const threshold = Number(readValue(tokens, index, token));
+            if (!Number.isInteger(threshold) || threshold < 0 || threshold > 100) {
+                throw new Error("--close threshold must be an integer from 0 to 100.");
+            }
+            overrides.close = { enabled: true, threshold };
+            index += 1;
+            continue;
+        }
+        if (token === "--no-close") {
+            overrides.close = { enabled: false };
+            continue;
+        }
+        throw new Error(`Unsupported PullGuard flag: ${token}`);
+    }
+    return overrides;
+}
+function applyCommentOverrides(config, overrides) {
+    if (!overrides || !config.trigger.allowCommentOverrides) {
+        return config;
+    }
+    return {
+        ...config,
+        model: {
+            provider: overrides.provider ?? config.model.provider,
+            name: overrides.model ?? config.model.name
+        },
+        analysis: {
+            ...config.analysis,
+            depth: overrides.depth ?? config.analysis.depth
+        },
+        actions: {
+            comment: {
+                ...config.actions.comment,
+                enabled: overrides.comment ?? config.actions.comment.enabled
+            },
+            labels: {
+                ...config.actions.labels,
+                enabled: overrides.labels ?? config.actions.labels.enabled
+            },
+            close: {
+                ...config.actions.close,
+                enabled: overrides.close?.enabled ?? config.actions.close.enabled,
+                threshold: overrides.close?.threshold ?? config.actions.close.threshold
+            }
+        }
+    };
+}
+function readValue(tokens, index, flag) {
+    const value = tokens[index + 1];
+    if (!value || value.startsWith("--")) {
+        throw new Error(`${flag} requires a value.`);
+    }
+    return value;
+}
+
 // EXTERNAL MODULE: ./node_modules/yaml/dist/index.js
 var yaml_dist = __nccwpck_require__(8815);
 ;// CONCATENATED MODULE: ./node_modules/zod/v3/helpers/util.js
@@ -49273,6 +49377,7 @@ const defaultConfig = {
         mode: "always",
         label: "run-pullguard",
         comment: "/pullguard",
+        allowCommentOverrides: true,
         allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
     },
     analysis: {
@@ -49307,6 +49412,8 @@ const configSchema = objectType({
         mode: enumType(["always", "label", "comment"]).default(defaultConfig.trigger.mode),
         label: stringType().min(1).default(defaultConfig.trigger.label),
         comment: stringType().min(1).default(defaultConfig.trigger.comment),
+        allowCommentOverrides: booleanType()
+            .default(defaultConfig.trigger.allowCommentOverrides),
         allowedCommentAuthorAssociations: arrayType(stringType().min(1))
             .default(defaultConfig.trigger.allowedCommentAuthorAssociations)
     })
@@ -49568,7 +49675,8 @@ function shouldRunForTrigger(context, config) {
         return { shouldRun: false, reason: "Comment is not on a pull request." };
     }
     const body = getNestedString(context.payload, ["comment", "body"]) ?? "";
-    if (!body.includes(config.comment)) {
+    const commentCommand = findCommentCommand(body, config.comment);
+    if (!commentCommand) {
         return { shouldRun: false, reason: `Waiting for comment '${config.comment}'.` };
     }
     const authorAssociation = getNestedString(context.payload, [
@@ -49582,7 +49690,13 @@ function shouldRunForTrigger(context, config) {
             reason: "Comment author is not allowed to trigger PullGuard."
         };
     }
-    return { shouldRun: true };
+    return { shouldRun: true, commentCommand };
+}
+function findCommentCommand(body, command) {
+    return body
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .find((line) => line === command || line.startsWith(`${command} `));
 }
 function getNestedString(payload, path) {
     const value = getNestedValue(payload, path);
@@ -49608,6 +49722,7 @@ function getNestedValue(payload, path) {
 
 
 
+
 async function run() {
     const token = getInput("github-token", { required: true });
     const openaiApiKey = getInput("openai-api-key");
@@ -49615,16 +49730,17 @@ async function run() {
     const configPath = getInput("config") || ".github/pullguard.yml";
     const modelOverride = getInput("model");
     const providerOverride = parseProviderInput(getInput("provider"));
-    const config = mergeModelOverride(parsePolicyConfig(await readConfig(configPath)), modelOverride, providerOverride || undefined);
+    const baseConfig = mergeModelOverride(parsePolicyConfig(await readConfig(configPath)), modelOverride, providerOverride || undefined);
     const trigger = shouldRunForTrigger({
         eventName: github_context.eventName,
         payload: github_context.payload
-    }, config.trigger);
+    }, baseConfig.trigger);
     if (!trigger.shouldRun) {
         info(trigger.reason ?? "PullGuard trigger did not match.");
         setOutput("skipped", "true");
         return;
     }
+    const config = applyCommentOverrides(baseConfig, trigger.commentCommand ? parseCommentCommand(trigger.commentCommand) : undefined);
     const octokit = getOctokit(token);
     const pr = await getPullRequestContext(octokit, config.analysis);
     const result = await analyze_analyzePullRequest({
