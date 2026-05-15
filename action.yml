@@ -1,0 +1,31 @@
+name: PR Checker
+description: Score pull request review risk and optionally comment, label, or close the PR.
+author: pr-checker
+
+inputs:
+  openai-api-key:
+    description: OpenAI API key used for BYOK analysis.
+    required: true
+  github-token:
+    description: GitHub token used to read the PR and apply configured actions.
+    required: false
+    default: ${{ github.token }}
+  config:
+    description: Path to the PR quality policy file.
+    required: false
+    default: .github/pr-checker.yml
+  model:
+    description: Optional model name override.
+    required: false
+
+outputs:
+  score:
+    description: Review-risk score from 0 to 100.
+  labels:
+    description: Comma-separated labels selected by policy.
+  should-close:
+    description: Whether the policy selected the close action.
+
+runs:
+  using: node20
+  main: dist/index.js

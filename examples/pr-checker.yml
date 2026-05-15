@@ -1,0 +1,19 @@
+model:
+  provider: openai
+  name: gpt-4.1-mini
+
+actions:
+  comment:
+    enabled: true
+
+  labels:
+    enabled: true
+    rules:
+      - threshold: 60
+        label: needs-human-review
+      - threshold: 80
+        label: high-risk-pr
+
+  close:
+    enabled: false
+    threshold: 95
