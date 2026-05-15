@@ -14,7 +14,7 @@ describe("buildInitFiles", () => {
     expect(getDefaultInitOptions()).toEqual({
       provider: "openai",
       trigger: "comment",
-      depth: "pr",
+      depth: "codebase",
       comment: true,
       labels: true,
       closeThreshold: undefined
@@ -32,11 +32,12 @@ describe("buildInitFiles", () => {
     });
 
     expect(files.workflow).toContain("OPENAI_API_KEY");
-    expect(files.workflow).toContain("actions/checkout@v5");
     expect(files.workflow).toContain("issue_comment:");
+    expect(files.workflow).not.toContain("pull_request_target:");
     expect(files.policy).toContain("provider: openai");
     expect(files.policy).toContain("mode: comment");
     expect(files.policy).toContain("comment: /pullguard");
+    expect(files.policy).toContain("threshold: 50");
     expect(files.policy).toContain("enabled: true");
     expect(files.policy).not.toContain("threshold: undefined");
   });
@@ -52,11 +53,29 @@ describe("buildInitFiles", () => {
     });
 
     expect(files.workflow).toContain("ANTHROPIC_API_KEY");
+    expect(files.workflow).toContain("pull_request_target:");
+    expect(files.workflow).toContain("types: [labeled]");
+    expect(files.workflow).not.toContain("issue_comment:");
     expect(files.policy).toContain("provider: anthropic");
     expect(files.policy).toContain("mode: label");
     expect(files.policy).toContain("depth: codebase");
     expect(files.policy).toContain("close:");
     expect(files.policy).toContain("threshold: 95");
+  });
+
+  it("generates pull request events only for always-triggered setup", () => {
+    const files = buildInitFiles({
+      provider: "openai",
+      trigger: "always",
+      depth: "codebase",
+      comment: true,
+      labels: false,
+      closeThreshold: undefined
+    });
+
+    expect(files.workflow).toContain("pull_request_target:");
+    expect(files.workflow).toContain("types: [opened, synchronize, reopened]");
+    expect(files.workflow).not.toContain("issue_comment:");
   });
 });
 

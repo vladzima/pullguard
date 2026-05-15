@@ -9,7 +9,7 @@ trigger:
   allowCommentOverrides: false
 
 analysis:
-  depth: pr
+  depth: codebase
   maxFiles: 20
   maxPatchCharsPerFile: 4000
   maxBaseFileCharsPerFile: 6000

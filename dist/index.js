@@ -49484,6 +49484,13 @@ function mergeModelOverride(config, modelName, provider) {
 
 ;// CONCATENATED MODULE: ./src/comment.ts
 const marker = "<!-- pullguard -->";
+function formatWorkingComment() {
+    return `${marker}
+## PullGuard
+
+Reviewing this PR. The result will replace this comment when analysis finishes.
+`;
+}
 function formatRiskComment(result) {
     const findings = result.findings.length
         ? result.findings.map(formatFinding).join("\n")
@@ -49580,6 +49587,9 @@ async function applyDecision(params) {
             state: "closed"
         });
     }
+}
+async function applyWorkingComment(params) {
+    await upsertComment(params.octokit, params.pr, formatWorkingComment());
 }
 async function ensureLabels(octokit, params) {
     await Promise.all(params.labels.map(async (label) => {
@@ -49779,6 +49789,9 @@ async function run() {
     const config = applyCommentOverrides(baseConfig, trigger.commentCommand ? parseCommentCommand(trigger.commentCommand) : undefined);
     const octokit = getOctokit(token);
     const pr = await getPullRequestContext(octokit, config.analysis);
+    if (config.actions.comment.enabled) {
+        await applyWorkingComment({ octokit, pr });
+    }
     const result = await analyze_analyzePullRequest({
         apiKeys: {
             openai: openaiApiKey || undefined,

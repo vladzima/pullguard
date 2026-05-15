@@ -1,6 +1,6 @@
 import * as github from "@actions/github";
 
-import { formatRiskComment, getCommentMarker } from "./comment.js";
+import { formatRiskComment, formatWorkingComment, getCommentMarker } from "./comment.js";
 import type {
   ActionDecision,
   AnalysisConfig,
@@ -88,6 +88,13 @@ export async function applyDecision(params: {
       state: "closed"
     });
   }
+}
+
+export async function applyWorkingComment(params: {
+  octokit: Octokit;
+  pr: PullRequestContext;
+}): Promise<void> {
+  await upsertComment(params.octokit, params.pr, formatWorkingComment());
 }
 
 export async function ensureLabels(

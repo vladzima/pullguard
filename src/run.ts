@@ -6,7 +6,7 @@ import { decideActions } from "./actions.js";
 import { analyzePullRequest } from "./analyze.js";
 import { applyCommentOverrides, parseCommentCommand } from "./comment-command.js";
 import { parsePolicyConfig, mergeModelOverride } from "./config.js";
-import { applyDecision, getPullRequestContext } from "./github.js";
+import { applyDecision, applyWorkingComment, getPullRequestContext } from "./github.js";
 import { shouldRunForTrigger } from "./trigger.js";
 
 export async function run(): Promise<void> {
@@ -42,6 +42,11 @@ export async function run(): Promise<void> {
   );
   const octokit = github.getOctokit(token);
   const pr = await getPullRequestContext(octokit, config.analysis);
+
+  if (config.actions.comment.enabled) {
+    await applyWorkingComment({ octokit, pr });
+  }
+
   const result = await analyzePullRequest({
     apiKeys: {
       openai: openaiApiKey || undefined,

@@ -4,6 +4,8 @@ PullGuard is a free BYOK GitHub Action for open-source maintainers. It scores pu
 
 It does not try to prove a PR was AI-generated. It flags review-risk patterns that waste maintainer time: missing tests, broad unrelated changes, risky refactors, duplicated logic, weak PR descriptions, and suspiciously shallow fixes.
 
+PullGuard is early work. Score calibration is still being adjusted against real OSS PRs, and feedback on false positives, false negatives, and confusing comments is especially useful.
+
 ## Install
 
 Fastest path:
@@ -23,7 +25,7 @@ The CLI writes:
 - `.github/workflows/pullguard.yml`
 - `.github/pullguard.yml`
 
-It also prints the exact next steps for your chosen setup: which GitHub secret to add, whether to apply `run-pullguard` or comment `/pullguard`, and which labels to create.
+It also prints the exact next steps for your chosen setup: which GitHub secret to add, whether to apply `run-pullguard` or comment `/pullguard`, and which labels PullGuard will create if missing.
 
 To change the setup later, either edit `.github/pullguard.yml` directly or rerun:
 
@@ -51,8 +53,6 @@ Create `.github/workflows/pullguard.yml`:
 name: PullGuard
 
 on:
-  pull_request_target:
-    types: [opened, synchronize, reopened, labeled]
   issue_comment:
     types: [created]
 
@@ -65,8 +65,6 @@ jobs:
   pullguard:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-
       - uses: vladzima/pullguard@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
@@ -82,7 +80,7 @@ model:
   name: gpt-5.4-mini-2026-03-17
 
 trigger:
-  mode: always
+  mode: comment
   label: run-pullguard
   comment: /pullguard
   allowCommentOverrides: true
@@ -92,7 +90,7 @@ trigger:
     - COLLABORATOR
 
 analysis:
-  depth: pr
+  depth: codebase
   maxFiles: 20
   maxPatchCharsPerFile: 4000
   maxBaseFileCharsPerFile: 6000
@@ -106,7 +104,7 @@ actions:
   labels:
     enabled: true
     rules:
-      - threshold: 60
+      - threshold: 50
         label: needs-human-review
       - threshold: 80
         label: high-risk-pr
@@ -193,7 +191,7 @@ trigger:
 
 With this config, a maintainer triggers review by commenting `/pullguard` on the PR.
 
-Comment triggers are restricted by `allowedCommentAuthorAssociations` so random commenters cannot spend the repository's BYOK credits. To use comment triggers, keep the `issue_comment` event in `.github/workflows/pullguard.yml`. To use label triggers, keep `labeled` in the `pull_request_target` event types.
+Comment triggers are restricted by `allowedCommentAuthorAssociations` so random commenters cannot spend the repository's BYOK credits. The init wizard generates workflow events for the selected trigger mode: `issue_comment` for comment mode, `pull_request_target` `labeled` for label mode, and opened/synchronized/reopened PR events for always mode. If you change `trigger.mode` later, rerun `npx pullguard init` or update `.github/workflows/pullguard.yml` to match.
 
 ## Comment arguments
 
@@ -229,10 +227,10 @@ trigger:
 
 ## Analysis depth
 
-`analysis.depth` controls token spend:
+`analysis.depth` controls token spend and context:
 
-- `pr`: cheapest default. Sends PR metadata, file stats, and capped patches.
-- `codebase`: more expensive. Also fetches capped base-branch contents for changed files so the model can compare the patch against existing code.
+- `codebase`: default. Fetches capped base-branch contents for changed files so the model can compare the patch against existing code.
+- `pr`: cheapest mode. Sends PR metadata, file stats, and capped patches only.
 
 Both modes keep output compact through `maxFindings` and `maxReviewFirstFiles`.
 
@@ -250,6 +248,8 @@ actions:
     enabled: true
 ```
 
+When a matching trigger starts analysis, PullGuard first posts a short "reviewing" placeholder comment and replaces it with the final result when analysis finishes.
+
 Apply labels when score thresholds are met:
 
 ```yaml
@@ -257,13 +257,13 @@ actions:
   labels:
     enabled: true
     rules:
-      - threshold: 60
+      - threshold: 50
         label: needs-human-review
       - threshold: 80
         label: high-risk-pr
 ```
 
-With this config, a PR with score `82` gets both `needs-human-review` and `high-risk-pr`.
+With this config, any PR with score `50` or higher gets `needs-human-review`; a PR with score `82` gets both `needs-human-review` and `high-risk-pr`.
 
 If a configured output label does not exist yet, PullGuard creates it before applying it.
 
@@ -294,7 +294,7 @@ Observe-only mode still computes outputs for later workflow steps, but it does n
 
 ## Security note
 
-The example uses `pull_request_target` so BYOK secrets are available for pull requests from forks. PullGuard reads pull request metadata and file patches through the GitHub API; it does not need to checkout or execute contributor code.
+PullGuard reads pull request metadata and file patches through the GitHub API; it does not need to checkout or execute contributor code. The init wizard keeps the workflow trigger narrow for the selected mode so comment-triggered installs do not create skipped PR checks on every PR open.
 
 Do not add a checkout of the pull request head to this workflow unless you fully understand the security implications.
 
@@ -309,8 +309,6 @@ Example:
 
 ```yaml
 steps:
-  - uses: actions/checkout@v5
-
   - id: pullguard
     uses: vladzima/pullguard@v1
     with:

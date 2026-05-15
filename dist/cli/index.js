@@ -67,7 +67,7 @@ async function promptForOptions() {
         console.log("");
         const provider = await choose(rl, "LLM provider", ["openai", "anthropic"], "openai", "Choose the provider whose API key you will add to GitHub Actions secrets.");
         const trigger = await choose(rl, "When should PullGuard run?", ["always", "label", "comment"], "comment", "`label` means apply `run-pullguard`; `comment` means comment `/pullguard`.");
-        const depth = await choose(rl, "Analysis depth", ["pr", "codebase"], "pr", "`pr` is cheapest; `codebase` also sends capped base-file context.");
+        const depth = await choose(rl, "Analysis depth", ["pr", "codebase"], "codebase", "`codebase` is the default; `pr` is cheaper and sends patches only.");
         const comment = await confirm(rl, "Post/update a PR comment with findings?", true);
         const labels = await confirm(rl, "Apply threshold labels like needs-human-review?", true);
         const close = await confirm(rl, "Allow automatic close for very high-risk PRs?", false);

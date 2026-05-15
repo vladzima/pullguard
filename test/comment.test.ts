@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { formatRiskComment } from "../src/comment.js";
+import { formatRiskComment, formatWorkingComment } from "../src/comment.js";
 
 describe("formatRiskComment", () => {
+  it("formats a working placeholder with the PullGuard marker", () => {
+    const body = formatWorkingComment();
+
+    expect(body).toContain("<!-- pullguard -->");
+    expect(body).toContain("Reviewing this PR");
+  });
+
   it("formats an evidence-first PR comment without AI accusation language", () => {
     const body = formatRiskComment({
       score: 88,

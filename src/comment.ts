@@ -2,6 +2,14 @@ import type { RiskFinding, RiskResult } from "./types.js";
 
 const marker = "<!-- pullguard -->";
 
+export function formatWorkingComment(): string {
+  return `${marker}
+## PullGuard
+
+Reviewing this PR. The result will replace this comment when analysis finishes.
+`;
+}
+
 export function formatRiskComment(result: RiskResult): string {
   const findings = result.findings.length
     ? result.findings.map(formatFinding).join("\n")

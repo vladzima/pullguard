@@ -12,7 +12,7 @@ export function buildInitFiles(options: InitOptions): {
   policy: string;
 } {
   return {
-    workflow: buildWorkflow(options.provider),
+    workflow: buildWorkflow(options),
     policy: buildPolicy(options)
   };
 }
@@ -21,26 +21,22 @@ export function getDefaultInitOptions(): InitOptions {
   return {
     provider: "openai",
     trigger: "comment",
-    depth: "pr",
+    depth: "codebase",
     comment: true,
     labels: true,
     closeThreshold: undefined
   };
 }
 
-function buildWorkflow(provider: InitOptions["provider"]): string {
+function buildWorkflow(options: InitOptions): string {
   const keyInput =
-    provider === "anthropic"
+    options.provider === "anthropic"
       ? "          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}"
       : "          openai-api-key: ${{ secrets.OPENAI_API_KEY }}";
 
   return `name: PullGuard
 
-on:
-  pull_request_target:
-    types: [opened, synchronize, reopened, labeled]
-  issue_comment:
-    types: [created]
+${buildWorkflowTrigger(options.trigger)}
 
 permissions:
   contents: read
@@ -51,13 +47,29 @@ jobs:
   pullguard:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-
       - uses: vladzima/pullguard@v1
         with:
 ${keyInput}
           config: .github/pullguard.yml
 `;
+}
+
+function buildWorkflowTrigger(trigger: InitOptions["trigger"]): string {
+  if (trigger === "comment") {
+    return `on:
+  issue_comment:
+    types: [created]`;
+  }
+
+  if (trigger === "label") {
+    return `on:
+  pull_request_target:
+    types: [labeled]`;
+  }
+
+  return `on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]`;
 }
 
 function buildPolicy(options: InitOptions): string {
@@ -95,7 +107,7 @@ actions:
   labels:
     enabled: ${options.labels}
     rules:
-      - threshold: 60
+      - threshold: 50
         label: needs-human-review
       - threshold: 80
         label: high-risk-pr

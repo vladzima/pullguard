@@ -103,8 +103,8 @@ async function promptForOptions(): Promise<InitOptions> {
       rl,
       "Analysis depth",
       ["pr", "codebase"],
-      "pr",
-      "`pr` is cheapest; `codebase` also sends capped base-file context."
+      "codebase",
+      "`codebase` is the default; `pr` is cheaper and sends patches only."
     );
     const comment = await confirm(rl, "Post/update a PR comment with findings?", true);
     const labels = await confirm(rl, "Apply threshold labels like needs-human-review?", true);
