@@ -140,9 +140,6 @@ Usage:
 The init command writes:
   .github/workflows/pullguard.yml
   .github/pullguard.yml
-
-Docs:
-  https://github.com/vladzima/pullguard#readme
 `);
 }
 

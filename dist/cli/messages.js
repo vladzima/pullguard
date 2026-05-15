@@ -1,4 +1,4 @@
-const docsUrl = "https://github.com/vladzima/pullguard#readme";
+export const docsUrl = "https://github.com/vladzima/pullguard#readme";
 export function buildNextSteps(options, written = true) {
     const secretName = options.provider === "anthropic" ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY";
     const steps = [
@@ -24,7 +24,6 @@ export function buildNextSteps(options, written = true) {
     if (options.labels) {
         steps.push("Create these labels in GitHub if they do not exist yet:", "  needs-human-review", "  high-risk-pr", "");
     }
-    steps.push(`Docs: ${docsUrl}`);
     return steps;
 }
 export function buildDryRunOutput(files) {
@@ -48,7 +47,8 @@ export function formatBanner() {
     return [
         color("PullGuard", "cyan"),
         "PR review-risk triage for maintainers",
-        "Writes a GitHub Actions workflow and policy file."
+        "Writes a GitHub Actions workflow and policy file.",
+        `Docs: ${docsUrl}`
     ].join("\n");
 }
 export function color(value, name) {

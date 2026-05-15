@@ -96,9 +96,6 @@ Usage:
 The init command writes:
   .github/workflows/pullguard.yml
   .github/pullguard.yml
-
-Docs:
-  https://github.com/vladzima/pullguard#readme
 `);
 }
 if (process.argv[1]?.endsWith("pullguard") || process.argv[1]?.endsWith("index.js")) {

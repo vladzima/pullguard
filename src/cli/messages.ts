@@ -1,6 +1,6 @@
 import type { InitOptions } from "./templates.js";
 
-const docsUrl = "https://github.com/vladzima/pullguard#readme";
+export const docsUrl = "https://github.com/vladzima/pullguard#readme";
 
 export function buildNextSteps(options: InitOptions, written = true): string[] {
   const secretName = options.provider === "anthropic" ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY";
@@ -48,8 +48,6 @@ export function buildNextSteps(options: InitOptions, written = true): string[] {
     );
   }
 
-  steps.push(`Docs: ${docsUrl}`);
-
   return steps;
 }
 
@@ -75,7 +73,8 @@ export function formatBanner(): string {
   return [
     color("PullGuard", "cyan"),
     "PR review-risk triage for maintainers",
-    "Writes a GitHub Actions workflow and policy file."
+    "Writes a GitHub Actions workflow and policy file.",
+    `Docs: ${docsUrl}`
   ].join("\n");
 }
 
