@@ -54,8 +54,8 @@ model:
   name: claude-sonnet-4-20250514
 trigger:
   mode: comment
-  label: run-pr-checker
-  comment: /pr-check
+  label: run-pullguard
+  comment: /pullguard
 analysis:
   depth: codebase
   maxFiles: 8
@@ -69,8 +69,8 @@ analysis:
     });
     expect(config.trigger).toEqual({
       mode: "comment",
-      label: "run-pr-checker",
-      comment: "/pr-check",
+      label: "run-pullguard",
+      comment: "/pullguard",
       allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
     });
     expect(config.analysis).toEqual({

@@ -18,8 +18,8 @@ describe("shouldRunForTrigger", () => {
       },
       {
         mode: "always",
-        label: "run-pr-checker",
-        comment: "/pr-check",
+        label: "run-pullguard",
+        comment: "/pullguard",
         allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
       }
     );
@@ -36,13 +36,13 @@ describe("shouldRunForTrigger", () => {
         eventName: "pull_request_target",
         payload: {
           action: "labeled",
-          label: { name: "run-pr-checker" }
+          label: { name: "run-pullguard" }
         }
       },
       {
         mode: "label",
-        label: "run-pr-checker",
-        comment: "/pr-check",
+        label: "run-pullguard",
+        comment: "/pullguard",
         allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
       }
     );
@@ -58,15 +58,15 @@ describe("shouldRunForTrigger", () => {
           action: "created",
           issue: { pull_request: {} },
           comment: {
-            body: "please /pr-check this",
+            body: "please /pullguard this",
             author_association: "COLLABORATOR"
           }
         }
       },
       {
         mode: "comment",
-        label: "run-pr-checker",
-        comment: "/pr-check",
+        label: "run-pullguard",
+        comment: "/pullguard",
         allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
       }
     );
@@ -82,22 +82,22 @@ describe("shouldRunForTrigger", () => {
           action: "created",
           issue: { pull_request: {} },
           comment: {
-            body: "/pr-check",
+            body: "/pullguard",
             author_association: "CONTRIBUTOR"
           }
         }
       },
       {
         mode: "comment",
-        label: "run-pr-checker",
-        comment: "/pr-check",
+        label: "run-pullguard",
+        comment: "/pullguard",
         allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
       }
     );
 
     expect(decision).toEqual({
       shouldRun: false,
-      reason: "Comment author is not allowed to trigger PR Checker."
+      reason: "Comment author is not allowed to trigger PullGuard."
     });
   });
 });

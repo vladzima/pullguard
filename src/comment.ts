@@ -1,6 +1,6 @@
 import type { RiskFinding, RiskResult } from "./types.js";
 
-const marker = "<!-- pr-checker -->";
+const marker = "<!-- pullguard -->";
 
 export function formatRiskComment(result: RiskResult): string {
   const findings = result.findings.length
@@ -12,7 +12,7 @@ export function formatRiskComment(result: RiskResult): string {
     : "- No specific file priority.";
 
   return `${marker}
-## PR Checker
+## PullGuard
 
 **Risk: ${result.score}/100 - ${riskBand(result.score)}**
 

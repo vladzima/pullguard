@@ -1,15 +1,15 @@
-# PR Checker
+# PullGuard
 
-PR Checker is a free BYOK GitHub Action for open-source maintainers. It scores pull request review risk and can independently comment, label, or close a PR based on repository policy.
+PullGuard is a free BYOK GitHub Action for open-source maintainers. It scores pull request review risk and can independently comment, label, or close a PR based on repository policy.
 
 It does not try to prove a PR was AI-generated. It flags review-risk patterns that waste maintainer time: missing tests, broad unrelated changes, risky refactors, duplicated logic, weak PR descriptions, and suspiciously shallow fixes.
 
 ## Install
 
-Create `.github/workflows/pr-checker.yml`:
+Create `.github/workflows/pullguard.yml`:
 
 ```yaml
-name: PR Checker
+name: PullGuard
 
 on:
   pull_request_target:
@@ -23,17 +23,17 @@ permissions:
   issues: write
 
 jobs:
-  pr-checker:
+  pullguard:
     runs-on: ubuntu-latest
     steps:
-      - uses: vladzima/pr-checker@v1
+      - uses: vladzima/pullguard@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          config: .github/pr-checker.yml
+          config: .github/pullguard.yml
 ```
 
-Create `.github/pr-checker.yml`:
+Create `.github/pullguard.yml`:
 
 ```yaml
 model:
@@ -42,8 +42,8 @@ model:
 
 trigger:
   mode: always
-  label: run-pr-checker
-  comment: /pr-check
+  label: run-pullguard
+  comment: /pullguard
 
 analysis:
   depth: pr
@@ -72,7 +72,7 @@ actions:
 
 ## Providers
 
-PR Checker supports OpenAI and Anthropic BYOK.
+PullGuard supports OpenAI and Anthropic BYOK.
 
 Use OpenAI:
 
@@ -90,7 +90,7 @@ model:
   name: claude-sonnet-4-20250514
 ```
 
-The matching API key must be passed to the action. You may pass both keys in the workflow and choose the provider in `.github/pr-checker.yml`.
+The matching API key must be passed to the action. You may pass both keys in the workflow and choose the provider in `.github/pullguard.yml`.
 
 ## Trigger Modes
 
@@ -103,36 +103,36 @@ The matching API key must be passed to the action. You may pass both keys in the
 With the default config, the manual PR comment is:
 
 ```text
-/pr-check
+/pullguard
 ```
 
-So a maintainer can trigger review by commenting `/pr-check` on the pull request.
+So a maintainer can trigger review by commenting `/pullguard` on the pull request.
 
 Label-triggered review:
 
 ```yaml
 trigger:
   mode: label
-  label: run-pr-checker
+  label: run-pullguard
 ```
 
-With this config, a maintainer triggers review by applying the `run-pr-checker` label to the PR.
+With this config, a maintainer triggers review by applying the `run-pullguard` label to the PR.
 
 Comment-triggered review:
 
 ```yaml
 trigger:
   mode: comment
-  comment: /pr-check
+  comment: /pullguard
   allowedCommentAuthorAssociations:
     - OWNER
     - MEMBER
     - COLLABORATOR
 ```
 
-With this config, a maintainer triggers review by commenting `/pr-check` on the PR.
+With this config, a maintainer triggers review by commenting `/pullguard` on the PR.
 
-Comment triggers are restricted by `allowedCommentAuthorAssociations` so random commenters cannot spend the repository's BYOK credits. To use comment triggers, keep the `issue_comment` event in `.github/workflows/pr-checker.yml`. To use label triggers, keep `labeled` in the `pull_request_target` event types.
+Comment triggers are restricted by `allowedCommentAuthorAssociations` so random commenters cannot spend the repository's BYOK credits. To use comment triggers, keep the `issue_comment` event in `.github/workflows/pullguard.yml`. To use label triggers, keep `labeled` in the `pull_request_target` event types.
 
 ## Analysis Depth
 
@@ -181,7 +181,7 @@ actions:
     threshold: 95
 ```
 
-With this config, PR Checker closes the PR only when the score is at least `95`.
+With this config, PullGuard closes the PR only when the score is at least `95`.
 
 Observe-only mode:
 
@@ -199,7 +199,7 @@ Observe-only mode still computes outputs for later workflow steps, but it does n
 
 ## Security Note
 
-The example uses `pull_request_target` so BYOK secrets are available for pull requests from forks. PR Checker reads pull request metadata and file patches through the GitHub API; it does not need to checkout or execute contributor code.
+The example uses `pull_request_target` so BYOK secrets are available for pull requests from forks. PullGuard reads pull request metadata and file patches through the GitHub API; it does not need to checkout or execute contributor code.
 
 Do not add a checkout of the pull request head to this workflow unless you fully understand the security implications.
 

@@ -28,7 +28,7 @@ export const riskResultSchema = {
 
 export function buildSystemPrompt(config: AnalysisConfig): string {
   return [
-    "You are PR Checker, a maintainer-focused PR quality reviewer.",
+    "You are PullGuard, a maintainer-focused PR quality reviewer.",
     "Assess review risk, not authorship. Never accuse contributors of using AI.",
     "Return only the required JSON object.",
     `Keep output short: at most ${config.maxFindings} findings, one sentence per finding, no filler.`,

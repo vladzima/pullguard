@@ -1,7 +1,6 @@
 {
-  "name": "pr-checker",
-  "version": "0.2.1",
-  "private": true,
+  "name": "pullguard",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "build": "tsc",

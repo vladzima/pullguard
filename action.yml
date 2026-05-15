@@ -1,6 +1,6 @@
-name: PR Checker
+name: PullGuard
 description: Score pull request review risk and optionally comment, label, or close the PR.
-author: pr-checker
+author: pullguard
 
 inputs:
   openai-api-key:
@@ -16,7 +16,7 @@ inputs:
   config:
     description: Path to the PR quality policy file.
     required: false
-    default: .github/pr-checker.yml
+    default: .github/pullguard.yml
   model:
     description: Optional model name override.
     required: false
@@ -32,7 +32,7 @@ outputs:
   should-close:
     description: Whether the policy selected the close action.
   skipped:
-    description: Whether PR Checker skipped because the configured trigger did not match.
+    description: Whether PullGuard skipped because the configured trigger did not match.
 
 runs:
   using: node20

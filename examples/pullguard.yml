@@ -4,8 +4,8 @@ model:
 
 trigger:
   mode: always
-  label: run-pr-checker
-  comment: /pr-check
+  label: run-pullguard
+  comment: /pullguard
 
 analysis:
   depth: pr

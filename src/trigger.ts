@@ -61,7 +61,7 @@ export function shouldRunForTrigger(
   ) {
     return {
       shouldRun: false,
-      reason: "Comment author is not allowed to trigger PR Checker."
+      reason: "Comment author is not allowed to trigger PullGuard."
     };
   }
 

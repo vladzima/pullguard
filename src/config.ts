@@ -10,8 +10,8 @@ const defaultConfig: PolicyConfig = {
   },
   trigger: {
     mode: "always",
-    label: "run-pr-checker",
-    comment: "/pr-check",
+    label: "run-pullguard",
+    comment: "/pullguard",
     allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
   },
   analysis: {

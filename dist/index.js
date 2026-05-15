@@ -44876,7 +44876,7 @@ const riskResultSchema = {
 };
 function buildSystemPrompt(config) {
     return [
-        "You are PR Checker, a maintainer-focused PR quality reviewer.",
+        "You are PullGuard, a maintainer-focused PR quality reviewer.",
         "Assess review risk, not authorship. Never accuse contributors of using AI.",
         "Return only the required JSON object.",
         `Keep output short: at most ${config.maxFindings} findings, one sentence per finding, no filler.`,
@@ -49271,8 +49271,8 @@ const defaultConfig = {
     },
     trigger: {
         mode: "always",
-        label: "run-pr-checker",
-        comment: "/pr-check",
+        label: "run-pullguard",
+        comment: "/pullguard",
         allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
     },
     analysis: {
@@ -49374,7 +49374,7 @@ function mergeModelOverride(config, modelName, provider) {
 }
 
 ;// CONCATENATED MODULE: ./src/comment.ts
-const marker = "<!-- pr-checker -->";
+const marker = "<!-- pullguard -->";
 function formatRiskComment(result) {
     const findings = result.findings.length
         ? result.findings.map(formatFinding).join("\n")
@@ -49383,7 +49383,7 @@ function formatRiskComment(result) {
         ? result.reviewFirstFiles.map((file) => `- \`${file}\``).join("\n")
         : "- No specific file priority.";
     return `${marker}
-## PR Checker
+## PullGuard
 
 **Risk: ${result.score}/100 - ${riskBand(result.score)}**
 
@@ -49579,7 +49579,7 @@ function shouldRunForTrigger(context, config) {
         !config.allowedCommentAuthorAssociations.includes(authorAssociation)) {
         return {
             shouldRun: false,
-            reason: "Comment author is not allowed to trigger PR Checker."
+            reason: "Comment author is not allowed to trigger PullGuard."
         };
     }
     return { shouldRun: true };
@@ -49612,7 +49612,7 @@ async function run() {
     const token = getInput("github-token", { required: true });
     const openaiApiKey = getInput("openai-api-key");
     const anthropicApiKey = getInput("anthropic-api-key");
-    const configPath = getInput("config") || ".github/pr-checker.yml";
+    const configPath = getInput("config") || ".github/pullguard.yml";
     const modelOverride = getInput("model");
     const providerOverride = parseProviderInput(getInput("provider"));
     const config = mergeModelOverride(parsePolicyConfig(await readConfig(configPath)), modelOverride, providerOverride || undefined);
@@ -49621,7 +49621,7 @@ async function run() {
         payload: github_context.payload
     }, config.trigger);
     if (!trigger.shouldRun) {
-        info(trigger.reason ?? "PR Checker trigger did not match.");
+        info(trigger.reason ?? "PullGuard trigger did not match.");
         setOutput("skipped", "true");
         return;
     }

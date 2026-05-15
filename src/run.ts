@@ -12,7 +12,7 @@ export async function run(): Promise<void> {
   const token = core.getInput("github-token", { required: true });
   const openaiApiKey = core.getInput("openai-api-key");
   const anthropicApiKey = core.getInput("anthropic-api-key");
-  const configPath = core.getInput("config") || ".github/pr-checker.yml";
+  const configPath = core.getInput("config") || ".github/pullguard.yml";
   const modelOverride = core.getInput("model");
   const providerOverride = parseProviderInput(core.getInput("provider"));
 
@@ -30,7 +30,7 @@ export async function run(): Promise<void> {
   );
 
   if (!trigger.shouldRun) {
-    core.info(trigger.reason ?? "PR Checker trigger did not match.");
+    core.info(trigger.reason ?? "PullGuard trigger did not match.");
     core.setOutput("skipped", "true");
     return;
   }
