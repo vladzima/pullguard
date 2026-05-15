@@ -269,6 +269,25 @@ Do not add a checkout of the pull request head to this workflow unless you fully
 - `should-close`: whether the policy selected the close action
 - `skipped`: whether the configured trigger did not match
 
+Example:
+
+```yaml
+steps:
+  - id: pullguard
+    uses: vladzima/pullguard@v1
+    with:
+      openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+
+  - if: ${{ steps.pullguard.outputs.skipped == 'false' }}
+    run: echo "Risk score is ${{ steps.pullguard.outputs.score }}"
+
+  - if: ${{ steps.pullguard.outputs['should-close'] == 'true' }}
+    run: echo "PullGuard selected close action"
+```
+
+Use bracket syntax for `should-close` because the output name contains a hyphen.
+If the configured trigger does not match, `skipped` is set to `true` and analysis does not run. If analysis starts and succeeds, `skipped` is set to `false`.
+
 ## Example policies
 
 - `examples/always-comment.yml`: comment on every configured PR event.
