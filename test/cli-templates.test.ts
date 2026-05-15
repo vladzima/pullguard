@@ -32,6 +32,7 @@ describe("buildInitFiles", () => {
     });
 
     expect(files.workflow).toContain("OPENAI_API_KEY");
+    expect(files.workflow).toContain("actions/checkout@v5");
     expect(files.workflow).toContain("issue_comment:");
     expect(files.policy).toContain("provider: openai");
     expect(files.policy).toContain("mode: comment");

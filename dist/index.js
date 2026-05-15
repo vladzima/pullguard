@@ -49767,7 +49767,7 @@ async function run() {
     const configPath = getInput("config") || ".github/pullguard.yml";
     const modelOverride = getInput("model");
     const providerOverride = parseProviderInput(getInput("provider"));
-    const baseConfig = mergeModelOverride(parsePolicyConfig(await readConfig(configPath)), modelOverride, providerOverride || undefined);
+    const baseConfig = mergeModelOverride(parsePolicyConfig(await readConfig(configPath, token)), modelOverride, providerOverride || undefined);
     const trigger = shouldRunForTrigger({
         eventName: github_context.eventName,
         payload: github_context.payload
@@ -49810,16 +49810,52 @@ function parseProviderInput(value) {
     }
     throw new Error("provider must be either 'openai' or 'anthropic'.");
 }
-async function readConfig(path) {
+async function readConfig(path, token) {
     try {
         return await (0,promises_namespaceObject.readFile)(path, "utf8");
     }
     catch (error) {
         if (error.code === "ENOENT") {
-            return "";
+            return await readRepositoryConfig(path, token);
         }
         throw error;
     }
+}
+async function readRepositoryConfig(path, token) {
+    const octokit = getOctokit(token);
+    const { owner, repo } = github_context.repo;
+    try {
+        const response = await octokit.rest.repos.getContent({
+            owner,
+            repo,
+            path,
+            ref: getConfigRef(github_context.payload)
+        });
+        if (Array.isArray(response.data) || response.data.type !== "file") {
+            return "";
+        }
+        if (!("content" in response.data) || response.data.encoding !== "base64") {
+            return "";
+        }
+        return Buffer.from(response.data.content, "base64").toString("utf8");
+    }
+    catch {
+        return "";
+    }
+}
+function getConfigRef(payload) {
+    return (run_getNestedString(payload, ["pull_request", "base", "ref"]) ??
+        run_getNestedString(payload, ["repository", "default_branch"]));
+}
+function run_getNestedString(payload, path) {
+    let current = payload;
+    for (const part of path) {
+        if (!current || typeof current !== "object" || !(part in current)) {
+            return undefined;
+        }
+        current = current[part];
+    }
+    return typeof current === "string" ? current : undefined;
 }
 
 ;// CONCATENATED MODULE: ./src/index.ts

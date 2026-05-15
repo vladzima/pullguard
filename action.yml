@@ -39,5 +39,5 @@ outputs:
     description: Whether PullGuard skipped because the configured trigger did not match.
 
 runs:
-  using: node20
+  using: node24
   main: dist/index.js

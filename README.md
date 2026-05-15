@@ -65,6 +65,8 @@ jobs:
   pullguard:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
+
       - uses: vladzima/pullguard@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
@@ -307,6 +309,8 @@ Example:
 
 ```yaml
 steps:
+  - uses: actions/checkout@v5
+
   - id: pullguard
     uses: vladzima/pullguard@v1
     with:

@@ -18,7 +18,7 @@ export async function run(): Promise<void> {
   const providerOverride = parseProviderInput(core.getInput("provider"));
 
   const baseConfig = mergeModelOverride(
-    parsePolicyConfig(await readConfig(configPath)),
+    parsePolicyConfig(await readConfig(configPath, token)),
     modelOverride,
     providerOverride || undefined
   );
@@ -78,14 +78,61 @@ function parseProviderInput(value: string): "openai" | "anthropic" | undefined {
   throw new Error("provider must be either 'openai' or 'anthropic'.");
 }
 
-async function readConfig(path: string): Promise<string> {
+async function readConfig(path: string, token: string): Promise<string> {
   try {
     return await readFile(path, "utf8");
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return "";
+      return await readRepositoryConfig(path, token);
     }
 
     throw error;
   }
+}
+
+async function readRepositoryConfig(path: string, token: string): Promise<string> {
+  const octokit = github.getOctokit(token);
+  const { owner, repo } = github.context.repo;
+
+  try {
+    const response = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path,
+      ref: getConfigRef(github.context.payload as Record<string, unknown>)
+    });
+
+    if (Array.isArray(response.data) || response.data.type !== "file") {
+      return "";
+    }
+
+    if (!("content" in response.data) || response.data.encoding !== "base64") {
+      return "";
+    }
+
+    return Buffer.from(response.data.content, "base64").toString("utf8");
+  } catch {
+    return "";
+  }
+}
+
+function getConfigRef(payload: Record<string, unknown>): string | undefined {
+  return (
+    getNestedString(payload, ["pull_request", "base", "ref"]) ??
+    getNestedString(payload, ["repository", "default_branch"])
+  );
+}
+
+function getNestedString(payload: Record<string, unknown>, path: string[]): string | undefined {
+  let current: unknown = payload;
+
+  for (const part of path) {
+    if (!current || typeof current !== "object" || !(part in current)) {
+      return undefined;
+    }
+
+    current = (current as Record<string, unknown>)[part];
+  }
+
+  return typeof current === "string" ? current : undefined;
 }
