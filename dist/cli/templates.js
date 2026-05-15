@@ -4,6 +4,16 @@ export function buildInitFiles(options) {
         policy: buildPolicy(options)
     };
 }
+export function getDefaultInitOptions() {
+    return {
+        provider: "openai",
+        trigger: "comment",
+        depth: "pr",
+        comment: true,
+        labels: true,
+        closeThreshold: undefined
+    };
+}
 function buildWorkflow(provider) {
     const keyInput = provider === "anthropic"
         ? "          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}"

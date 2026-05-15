@@ -12,6 +12,12 @@ Fastest path:
 npx pullguard init
 ```
 
+Preview without writing files:
+
+```bash
+npx pullguard init --dry-run
+```
+
 The CLI writes:
 
 - `.github/workflows/pullguard.yml`

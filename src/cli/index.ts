@@ -4,11 +4,13 @@ import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
-import { buildInitFiles, type InitOptions } from "./templates.js";
-import { buildNextSteps, color, formatBanner } from "./messages.js";
+import { buildInitFiles, getDefaultInitOptions, type InitOptions } from "./templates.js";
+import { buildDryRunOutput, buildNextSteps, color, formatBanner } from "./messages.js";
 
 async function main(): Promise<void> {
   const command = process.argv[2];
+  const dryRun = process.argv.includes("--dry-run");
+  const yes = process.argv.includes("--yes") || process.argv.includes("-y");
 
   if (!command || command === "--help" || command === "-h") {
     printHelp();
@@ -19,15 +21,22 @@ async function main(): Promise<void> {
     throw new Error(`Unknown command: ${command}`);
   }
 
-  const options = await promptForOptions();
+  const options = yes ? getDefaultInitOptions() : await promptForOptions();
   const files = buildInitFiles(options);
 
-  await mkdir(join(process.cwd(), ".github", "workflows"), { recursive: true });
-  await writeFile(join(process.cwd(), ".github", "workflows", "pullguard.yml"), files.workflow);
-  await writeFile(join(process.cwd(), ".github", "pullguard.yml"), files.policy);
+  if (dryRun) {
+    console.log("");
+    for (const line of buildDryRunOutput(files)) {
+      console.log(line);
+    }
+  } else {
+    await mkdir(join(process.cwd(), ".github", "workflows"), { recursive: true });
+    await writeFile(join(process.cwd(), ".github", "workflows", "pullguard.yml"), files.workflow);
+    await writeFile(join(process.cwd(), ".github", "pullguard.yml"), files.policy);
+  }
 
   console.log("");
-  for (const line of buildNextSteps(options)) {
+  for (const line of buildNextSteps(options, !dryRun)) {
     console.log(line);
   }
 }
@@ -125,6 +134,8 @@ function printHelp(): void {
 
 Usage:
   npx pullguard init
+  npx pullguard init --dry-run
+  npx pullguard init --yes --dry-run
 
 The init command writes:
   .github/workflows/pullguard.yml

@@ -1,6 +1,6 @@
 {
   "name": "pullguard",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "BYOK pull request review-risk triage for open-source maintainers.",
   "type": "module",
   "bin": {

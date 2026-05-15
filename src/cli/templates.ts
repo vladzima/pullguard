@@ -17,6 +17,17 @@ export function buildInitFiles(options: InitOptions): {
   };
 }
 
+export function getDefaultInitOptions(): InitOptions {
+  return {
+    provider: "openai",
+    trigger: "comment",
+    depth: "pr",
+    comment: true,
+    labels: true,
+    closeThreshold: undefined
+  };
+}
+
 function buildWorkflow(provider: InitOptions["provider"]): string {
   const keyInput =
     provider === "anthropic"

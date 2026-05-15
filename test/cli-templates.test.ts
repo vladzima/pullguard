@@ -1,9 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import { buildInitFiles } from "../src/cli/templates.js";
-import { buildNextSteps } from "../src/cli/messages.js";
+import { buildDryRunOutput, buildNextSteps } from "../src/cli/messages.js";
+import { getDefaultInitOptions } from "../src/cli/templates.js";
 
 describe("buildInitFiles", () => {
+  it("provides defaults for non-interactive init", () => {
+    expect(getDefaultInitOptions()).toEqual({
+      provider: "openai",
+      trigger: "comment",
+      depth: "pr",
+      comment: true,
+      labels: true,
+      closeThreshold: undefined
+    });
+  });
+
   it("generates workflow and policy files for comment-triggered OpenAI setup", () => {
     const files = buildInitFiles({
       provider: "openai",
@@ -42,6 +54,22 @@ describe("buildInitFiles", () => {
   });
 });
 
+describe("buildDryRunOutput", () => {
+  it("prints both files without implying they were written", () => {
+    const output = buildDryRunOutput({
+      workflow: "name: PullGuard\n",
+      policy: "model:\n  provider: openai\n"
+    }).join("\n");
+
+    expect(output).toContain("Dry run");
+    expect(output).toContain(".github/workflows/pullguard.yml");
+    expect(output).toContain("name: PullGuard");
+    expect(output).toContain(".github/pullguard.yml");
+    expect(output).toContain("provider: openai");
+    expect(output).toContain("No files were written.");
+  });
+});
+
 describe("buildNextSteps", () => {
   it("explains how to use label-triggered setup without browsing docs", () => {
     const output = buildNextSteps({
@@ -57,6 +85,23 @@ describe("buildNextSteps", () => {
     expect(output).toContain("Apply the label `run-pullguard`");
     expect(output).toContain("Create these labels");
     expect(output).toContain("Docs: https://github.com/vladzima/pullguard#readme");
+  });
+
+  it("does not say files were created during dry-run guidance", () => {
+    const output = buildNextSteps(
+      {
+        provider: "openai",
+        trigger: "comment",
+        depth: "pr",
+        comment: true,
+        labels: true,
+        closeThreshold: undefined
+      },
+      false
+    ).join("\n");
+
+    expect(output).toContain("Would create:");
+    expect(output).not.toContain("Created:");
   });
 
   it("explains the exact comment command for comment-triggered setup", () => {

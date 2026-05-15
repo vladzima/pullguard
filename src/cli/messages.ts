@@ -2,10 +2,10 @@ import type { InitOptions } from "./templates.js";
 
 const docsUrl = "https://github.com/vladzima/pullguard#readme";
 
-export function buildNextSteps(options: InitOptions): string[] {
+export function buildNextSteps(options: InitOptions, written = true): string[] {
   const secretName = options.provider === "anthropic" ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY";
   const steps = [
-    "Created:",
+    written ? "Created:" : "Would create:",
     "  .github/workflows/pullguard.yml",
     "  .github/pullguard.yml",
     "",
@@ -51,6 +51,24 @@ export function buildNextSteps(options: InitOptions): string[] {
   steps.push(`Docs: ${docsUrl}`);
 
   return steps;
+}
+
+export function buildDryRunOutput(files: { workflow: string; policy: string }): string[] {
+  return [
+    "Dry run",
+    "",
+    ".github/workflows/pullguard.yml",
+    "```yaml",
+    files.workflow.trimEnd(),
+    "```",
+    "",
+    ".github/pullguard.yml",
+    "```yaml",
+    files.policy.trimEnd(),
+    "```",
+    "",
+    "No files were written."
+  ];
 }
 
 export function formatBanner(): string {
