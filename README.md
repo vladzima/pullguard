@@ -88,7 +88,7 @@ actions:
     threshold: 95
 ```
 
-## Add Provider API Key
+## Add provider API key
 
 PullGuard is BYOK. Add the selected provider key as a GitHub Actions secret:
 
@@ -125,7 +125,7 @@ model:
 
 The matching API key must be passed to the action. You may pass both keys in the workflow and choose the provider in `.github/pullguard.yml`.
 
-## Trigger Modes
+## Trigger modes
 
 `trigger.mode` controls when analysis runs:
 
@@ -167,7 +167,7 @@ With this config, a maintainer triggers review by commenting `/pullguard` on the
 
 Comment triggers are restricted by `allowedCommentAuthorAssociations` so random commenters cannot spend the repository's BYOK credits. To use comment triggers, keep the `issue_comment` event in `.github/workflows/pullguard.yml`. To use label triggers, keep `labeled` in the `pull_request_target` event types.
 
-## Comment Arguments
+## Comment arguments
 
 Trusted maintainers can override a single comment-triggered run:
 
@@ -193,7 +193,7 @@ trigger:
   allowCommentOverrides: false
 ```
 
-## Analysis Depth
+## Analysis depth
 
 `analysis.depth` controls token spend:
 
@@ -202,7 +202,7 @@ trigger:
 
 Both modes keep output compact through `maxFindings` and `maxReviewFirstFiles`.
 
-## Actions Are Independent
+## Actions are independent
 
 `comment`, `labels`, and `close` are separate choices. You can run observe-only by disabling all three, comment without labels, label without comments, or opt into automatic closing for very high-risk PRs.
 
@@ -256,7 +256,7 @@ actions:
 
 Observe-only mode still computes outputs for later workflow steps, but it does not modify the PR.
 
-## Security Note
+## Security note
 
 The example uses `pull_request_target` so BYOK secrets are available for pull requests from forks. PullGuard reads pull request metadata and file patches through the GitHub API; it does not need to checkout or execute contributor code.
 
@@ -269,7 +269,7 @@ Do not add a checkout of the pull request head to this workflow unless you fully
 - `should-close`: whether the policy selected the close action
 - `skipped`: whether the configured trigger did not match
 
-## Example Policies
+## Example policies
 
 - `examples/always-comment.yml`: comment on every configured PR event.
 - `examples/manual-comment-trigger.yml`: run only when a maintainer comments `/pullguard`.
