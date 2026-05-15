@@ -13,7 +13,9 @@ name: PR Checker
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
@@ -27,6 +29,7 @@ jobs:
       - uses: vladzima/pr-checker@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           config: .github/pr-checker.yml
 ```
 
@@ -35,7 +38,20 @@ Create `.github/pr-checker.yml`:
 ```yaml
 model:
   provider: openai
-  name: gpt-4.1-mini
+  name: gpt-5.4-mini-2026-03-17
+
+trigger:
+  mode: always
+  label: run-pr-checker
+  comment: /pr-check
+
+analysis:
+  depth: pr
+  maxFiles: 20
+  maxPatchCharsPerFile: 4000
+  maxBaseFileCharsPerFile: 6000
+  maxFindings: 4
+  maxReviewFirstFiles: 5
 
 actions:
   comment:
@@ -54,6 +70,67 @@ actions:
     threshold: 95
 ```
 
+## Providers
+
+PR Checker supports OpenAI and Anthropic BYOK.
+
+Use OpenAI:
+
+```yaml
+model:
+  provider: openai
+  name: gpt-5.4-mini-2026-03-17
+```
+
+Use Anthropic:
+
+```yaml
+model:
+  provider: anthropic
+  name: claude-sonnet-4-20250514
+```
+
+The matching API key must be passed to the action. You may pass both keys in the workflow and choose the provider in `.github/pr-checker.yml`.
+
+## Trigger Modes
+
+`trigger.mode` controls when analysis runs:
+
+- `always`: run on every configured PR event.
+- `label`: run only when the configured label is applied.
+- `comment`: run only when an allowed maintainer comments the configured phrase.
+
+Label-triggered review:
+
+```yaml
+trigger:
+  mode: label
+  label: run-pr-checker
+```
+
+Comment-triggered review:
+
+```yaml
+trigger:
+  mode: comment
+  comment: /pr-check
+  allowedCommentAuthorAssociations:
+    - OWNER
+    - MEMBER
+    - COLLABORATOR
+```
+
+Comment triggers are restricted by `allowedCommentAuthorAssociations` so random commenters cannot spend the repository's BYOK credits.
+
+## Analysis Depth
+
+`analysis.depth` controls token spend:
+
+- `pr`: cheapest default. Sends PR metadata, file stats, and capped patches.
+- `codebase`: more expensive. Also fetches capped base-branch contents for changed files so the model can compare the patch against existing code.
+
+Both modes keep output compact through `maxFindings` and `maxReviewFirstFiles`.
+
 ## Actions Are Independent
 
 `comment`, `labels`, and `close` are separate choices. You can run observe-only by disabling all three, comment without labels, label without comments, or opt into automatic closing for very high-risk PRs.
@@ -71,3 +148,4 @@ Do not add a checkout of the pull request head to this workflow unless you fully
 - `score`: review-risk score from `0` to `100`
 - `labels`: comma-separated labels selected by policy
 - `should-close`: whether the policy selected the close action
+- `skipped`: whether the configured trigger did not match

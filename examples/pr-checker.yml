@@ -1,6 +1,19 @@
 model:
   provider: openai
-  name: gpt-4.1-mini
+  name: gpt-5.4-mini-2026-03-17
+
+trigger:
+  mode: always
+  label: run-pr-checker
+  comment: /pr-check
+
+analysis:
+  depth: pr
+  maxFiles: 20
+  maxPatchCharsPerFile: 4000
+  maxBaseFileCharsPerFile: 6000
+  maxFindings: 4
+  maxReviewFirstFiles: 5
 
 actions:
   comment:

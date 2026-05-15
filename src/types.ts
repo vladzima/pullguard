@@ -1,6 +1,26 @@
 export type ModelConfig = {
-  provider: "openai";
+  provider: "openai" | "anthropic";
   name: string;
+};
+
+export type TriggerMode = "always" | "label" | "comment";
+
+export type TriggerConfig = {
+  mode: TriggerMode;
+  label: string;
+  comment: string;
+  allowedCommentAuthorAssociations: string[];
+};
+
+export type AnalysisDepth = "pr" | "codebase";
+
+export type AnalysisConfig = {
+  depth: AnalysisDepth;
+  maxFiles: number;
+  maxPatchCharsPerFile: number;
+  maxBaseFileCharsPerFile: number;
+  maxFindings: number;
+  maxReviewFirstFiles: number;
 };
 
 export type LabelRule = {
@@ -10,6 +30,8 @@ export type LabelRule = {
 
 export type PolicyConfig = {
   model: ModelConfig;
+  trigger: TriggerConfig;
+  analysis: AnalysisConfig;
   actions: {
     comment: {
       enabled: boolean;
@@ -66,4 +88,5 @@ export type PullRequestFile = {
   additions: number;
   deletions: number;
   patch?: string;
+  baseContent?: string;
 };

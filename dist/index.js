@@ -40430,7 +40430,7 @@ function notice(message, properties = {}) {
  * @param message info message
  */
 function info(message) {
-    process.stdout.write(message + os.EOL);
+    process.stdout.write(message + external_os_namespaceObject.EOL);
 }
 /**
  * Begin an output group.
@@ -44848,6 +44848,211 @@ function decideActions(result, config) {
     };
 }
 
+;// CONCATENATED MODULE: ./src/prompt.ts
+const riskResultSchema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+        score: { type: "integer", minimum: 0, maximum: 100 },
+        summary: { type: "string" },
+        findings: {
+            type: "array",
+            items: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                    category: { type: "string" },
+                    severity: { type: "string", enum: ["low", "medium", "high"] },
+                    message: { type: "string" },
+                    file: { type: "string" }
+                },
+                required: ["category", "severity", "message", "file"]
+            }
+        },
+        reviewFirstFiles: { type: "array", items: { type: "string" } },
+        recommendedAction: { type: "string" }
+    },
+    required: ["score", "summary", "findings", "reviewFirstFiles", "recommendedAction"]
+};
+function buildSystemPrompt(config) {
+    return [
+        "You are PR Checker, a maintainer-focused PR quality reviewer.",
+        "Assess review risk, not authorship. Never accuse contributors of using AI.",
+        "Return only the required JSON object.",
+        `Keep output short: at most ${config.maxFindings} findings, one sentence per finding, no filler.`,
+        `Review-first files must contain at most ${config.maxReviewFirstFiles} paths.`,
+        "Prefer concrete evidence from the supplied PR data over speculation."
+    ].join(" ");
+}
+function buildReviewPrompt(pr, config) {
+    const files = pr.files.slice(0, config.maxFiles).map((file) => {
+        const item = {
+            filename: file.filename,
+            status: file.status,
+            additions: file.additions,
+            deletions: file.deletions,
+            patch: truncate(file.patch ?? "", config.maxPatchCharsPerFile)
+        };
+        if (config.depth === "codebase") {
+            item.baseContent = truncate(file.baseContent ?? "", config.maxBaseFileCharsPerFile);
+        }
+        return item;
+    });
+    return JSON.stringify({
+        instructions: {
+            depth: config.depth,
+            scoring: "0 means no notable review risk; 100 means likely maintainer time sink or unsafe to merge.",
+            categories: "missing_tests, unrelated_changes, risky_refactor, api_docs_mismatch, dependency_risk, duplicated_logic, weak_test, convention_mismatch, issue_mismatch",
+            outputStyle: "hard structured JSON only; short bullet-ready strings"
+        },
+        pullRequest: {
+            title: pr.title,
+            body: truncate(pr.body, 2000),
+            author: pr.author,
+            baseRef: pr.baseRef,
+            headRef: pr.headRef
+        },
+        limits: {
+            maxFindings: config.maxFindings,
+            maxReviewFirstFiles: config.maxReviewFirstFiles
+        },
+        files
+    }, null, 2);
+}
+function truncate(value, maxLength) {
+    if (value.length <= maxLength) {
+        return value;
+    }
+    return `${value.slice(0, maxLength)}\n[truncated]`;
+}
+
+;// CONCATENATED MODULE: ./src/anthropic.ts
+
+async function analyzePullRequestWithAnthropic(params) {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+            "x-api-key": params.apiKey,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            model: params.model,
+            max_tokens: 900,
+            system: `${buildSystemPrompt(params.analysis)} Return valid JSON only. No markdown.`,
+            messages: [
+                {
+                    role: "user",
+                    content: buildReviewPrompt(params.pr, params.analysis)
+                }
+            ]
+        })
+    });
+    if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`Anthropic request failed with ${response.status}: ${body}`);
+    }
+    const data = (await response.json());
+    const text = data.content
+        .filter((item) => item.type === "text")
+        .map((item) => item.text)
+        .join("\n")
+        .trim();
+    if (!text) {
+        throw new Error("Anthropic response did not include text content.");
+    }
+    return JSON.parse(stripJsonFence(text));
+}
+function stripJsonFence(value) {
+    return value
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/i, "");
+}
+
+;// CONCATENATED MODULE: ./src/openai.ts
+
+async function analyzePullRequest(params) {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${params.apiKey}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            model: params.model,
+            input: [
+                {
+                    role: "system",
+                    content: buildSystemPrompt(params.analysis)
+                },
+                {
+                    role: "user",
+                    content: buildReviewPrompt(params.pr, params.analysis)
+                }
+            ],
+            max_output_tokens: 900,
+            text: {
+                format: {
+                    type: "json_schema",
+                    name: "pr_quality_risk",
+                    strict: true,
+                    schema: riskResultSchema
+                }
+            }
+        })
+    });
+    if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`OpenAI request failed with ${response.status}: ${body}`);
+    }
+    const data = (await response.json());
+    const outputText = extractOutputText(data);
+    if (!outputText) {
+        throw new Error("OpenAI response did not include output text.");
+    }
+    return JSON.parse(outputText);
+}
+function extractOutputText(response) {
+    if (typeof response.output_text === "string") {
+        return response.output_text;
+    }
+    for (const item of response.output ?? []) {
+        for (const content of item.content ?? []) {
+            if (content.type === "output_text" && typeof content.text === "string") {
+                return content.text;
+            }
+        }
+    }
+    return undefined;
+}
+
+;// CONCATENATED MODULE: ./src/analyze.ts
+
+
+async function analyze_analyzePullRequest(params) {
+    if (params.model.provider === "openai") {
+        if (!params.apiKeys.openai) {
+            throw new Error("openai-api-key is required when model.provider is openai.");
+        }
+        return analyzePullRequest({
+            apiKey: params.apiKeys.openai,
+            model: params.model.name,
+            pr: params.pr,
+            analysis: params.analysis
+        });
+    }
+    if (!params.apiKeys.anthropic) {
+        throw new Error("anthropic-api-key is required when model.provider is anthropic.");
+    }
+    return analyzePullRequestWithAnthropic({
+        apiKey: params.apiKeys.anthropic,
+        model: params.model.name,
+        pr: params.pr,
+        analysis: params.analysis
+    });
+}
+
 // EXTERNAL MODULE: ./node_modules/yaml/dist/index.js
 var yaml_dist = __nccwpck_require__(8815);
 ;// CONCATENATED MODULE: ./node_modules/zod/v3/helpers/util.js
@@ -49062,7 +49267,21 @@ const NEVER = (/* unused pure expression or super */ null && (INVALID));
 const defaultConfig = {
     model: {
         provider: "openai",
-        name: "gpt-4.1-mini"
+        name: "gpt-5.4-mini-2026-03-17"
+    },
+    trigger: {
+        mode: "always",
+        label: "run-pr-checker",
+        comment: "/pr-check",
+        allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
+    },
+    analysis: {
+        depth: "pr",
+        maxFiles: 20,
+        maxPatchCharsPerFile: 4000,
+        maxBaseFileCharsPerFile: 6000,
+        maxFindings: 4,
+        maxReviewFirstFiles: 5
     },
     actions: {
         comment: {
@@ -49080,10 +49299,39 @@ const defaultConfig = {
 };
 const configSchema = objectType({
     model: objectType({
-        provider: literalType("openai").default(defaultConfig.model.provider),
+        provider: enumType(["openai", "anthropic"]).default(defaultConfig.model.provider),
         name: stringType().min(1).default(defaultConfig.model.name)
     })
         .default(defaultConfig.model),
+    trigger: objectType({
+        mode: enumType(["always", "label", "comment"]).default(defaultConfig.trigger.mode),
+        label: stringType().min(1).default(defaultConfig.trigger.label),
+        comment: stringType().min(1).default(defaultConfig.trigger.comment),
+        allowedCommentAuthorAssociations: arrayType(stringType().min(1))
+            .default(defaultConfig.trigger.allowedCommentAuthorAssociations)
+    })
+        .default(defaultConfig.trigger),
+    analysis: objectType({
+        depth: enumType(["pr", "codebase"]).default(defaultConfig.analysis.depth),
+        maxFiles: numberType().int().min(1).max(100).default(defaultConfig.analysis.maxFiles),
+        maxPatchCharsPerFile: numberType()
+            .int()
+            .min(200)
+            .max(50000)
+            .default(defaultConfig.analysis.maxPatchCharsPerFile),
+        maxBaseFileCharsPerFile: numberType()
+            .int()
+            .min(200)
+            .max(50000)
+            .default(defaultConfig.analysis.maxBaseFileCharsPerFile),
+        maxFindings: numberType().int().min(1).max(10).default(defaultConfig.analysis.maxFindings),
+        maxReviewFirstFiles: numberType()
+            .int()
+            .min(1)
+            .max(10)
+            .default(defaultConfig.analysis.maxReviewFirstFiles)
+    })
+        .default(defaultConfig.analysis),
     actions: objectType({
         comment: objectType({
             enabled: booleanType().default(defaultConfig.actions.comment.enabled)
@@ -49111,15 +49359,16 @@ function parsePolicyConfig(contents) {
     const parsed = contents.trim().length > 0 ? (0,yaml_dist/* parse */.qg)(contents) : {};
     return configSchema.parse(parsed);
 }
-function mergeModelOverride(config, modelName) {
-    if (!modelName) {
+function mergeModelOverride(config, modelName, provider) {
+    if (!modelName && !provider) {
         return config;
     }
     return {
         ...config,
         model: {
             ...config.model,
-            name: modelName
+            provider: provider ?? config.model.provider,
+            name: modelName ?? config.model.name
         }
     };
 }
@@ -49161,12 +49410,12 @@ function formatFinding(finding) {
 ;// CONCATENATED MODULE: ./src/github.ts
 
 
-async function getPullRequestContext(octokit) {
-    const pullRequest = github_context.payload.pull_request;
-    if (!pullRequest) {
-        throw new Error("This action must run on a pull_request event.");
-    }
+async function getPullRequestContext(octokit, analysis) {
     const { owner, repo } = github_context.repo;
+    const pullRequest = await resolvePullRequest(octokit, owner, repo);
+    if (!pullRequest) {
+        throw new Error("This action must run on a pull_request or issue_comment event for a PR.");
+    }
     const files = await octokit.paginate(octokit.rest.pulls.listFiles, {
         owner,
         repo,
@@ -49182,13 +49431,13 @@ async function getPullRequestContext(octokit) {
         author: pullRequest.user?.login ?? "unknown",
         baseRef: pullRequest.base.ref,
         headRef: pullRequest.head.ref,
-        files: files.map((file) => ({
+        files: await withOptionalBaseContext(octokit, owner, repo, pullRequest.base.ref, files.map((file) => ({
             filename: file.filename,
             status: file.status,
             additions: file.additions,
             deletions: file.deletions,
             patch: file.patch
-        }))
+        })), analysis)
     };
 }
 async function applyDecision(params) {
@@ -49236,131 +49485,109 @@ async function upsertComment(octokit, pr, body) {
         body
     });
 }
-
-;// CONCATENATED MODULE: ./src/openai.ts
-const riskResultSchema = {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-        score: {
-            type: "integer",
-            minimum: 0,
-            maximum: 100
-        },
-        summary: {
-            type: "string"
-        },
-        findings: {
-            type: "array",
-            items: {
-                type: "object",
-                additionalProperties: false,
-                properties: {
-                    category: {
-                        type: "string"
-                    },
-                    severity: {
-                        type: "string",
-                        enum: ["low", "medium", "high"]
-                    },
-                    message: {
-                        type: "string"
-                    },
-                    file: {
-                        type: "string"
-                    }
-                },
-                required: ["category", "severity", "message", "file"]
-            }
-        },
-        reviewFirstFiles: {
-            type: "array",
-            items: {
-                type: "string"
-            }
-        },
-        recommendedAction: {
-            type: "string"
-        }
-    },
-    required: ["score", "summary", "findings", "reviewFirstFiles", "recommendedAction"]
-};
-async function analyzePullRequest(params) {
-    const response = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${params.apiKey}`,
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            model: params.model,
-            input: [
-                {
-                    role: "system",
-                    content: "You are a maintainer-focused PR quality reviewer. Assess review risk, not authorship. Do not accuse contributors of using AI. Ground every finding in the supplied PR metadata and diff summary."
-                },
-                {
-                    role: "user",
-                    content: buildPrompt(params.pr)
-                }
-            ],
-            text: {
-                format: {
-                    type: "json_schema",
-                    name: "pr_quality_risk",
-                    strict: true,
-                    schema: riskResultSchema
-                }
-            }
-        })
+async function resolvePullRequest(octokit, owner, repo) {
+    const pullRequest = github_context.payload.pull_request;
+    if (pullRequest) {
+        return pullRequest;
+    }
+    const issue = github_context.payload.issue;
+    if (!issue?.pull_request) {
+        throw new Error("issue_comment event is not attached to a pull request.");
+    }
+    const response = await octokit.rest.pulls.get({
+        owner,
+        repo,
+        pull_number: issue.number
     });
-    if (!response.ok) {
-        const body = await response.text();
-        throw new Error(`OpenAI request failed with ${response.status}: ${body}`);
-    }
-    const data = (await response.json());
-    const outputText = extractOutputText(data);
-    if (!outputText) {
-        throw new Error("OpenAI response did not include output text.");
-    }
-    return JSON.parse(outputText);
+    return response.data;
 }
-function buildPrompt(pr) {
-    return JSON.stringify({
-        pullRequest: {
-            title: pr.title,
-            body: pr.body,
-            author: pr.author,
-            baseRef: pr.baseRef,
-            headRef: pr.headRef
-        },
-        files: pr.files.map((file) => ({
-            filename: file.filename,
-            status: file.status,
-            additions: file.additions,
-            deletions: file.deletions,
-            patch: truncate(file.patch ?? "", 12000)
-        }))
-    }, null, 2);
-}
-function truncate(value, maxLength) {
-    if (value.length <= maxLength) {
-        return value;
+async function withOptionalBaseContext(octokit, owner, repo, ref, files, analysis) {
+    if (analysis.depth !== "codebase") {
+        return files;
     }
-    return `${value.slice(0, maxLength)}\n[truncated]`;
+    const limited = files.slice(0, analysis.maxFiles);
+    const enriched = await Promise.all(limited.map(async (file) => ({
+        ...file,
+        baseContent: await readBaseFile(octokit, owner, repo, ref, file.filename)
+    })));
+    return [...enriched, ...files.slice(analysis.maxFiles)];
 }
-function extractOutputText(response) {
-    if (typeof response.output_text === "string") {
-        return response.output_text;
-    }
-    for (const item of response.output ?? []) {
-        for (const content of item.content ?? []) {
-            if (content.type === "output_text" && typeof content.text === "string") {
-                return content.text;
-            }
+async function readBaseFile(octokit, owner, repo, ref, path) {
+    try {
+        const response = await octokit.rest.repos.getContent({
+            owner,
+            repo,
+            path,
+            ref
+        });
+        if (Array.isArray(response.data) || response.data.type !== "file") {
+            return "";
         }
+        if (!("content" in response.data) || response.data.encoding !== "base64") {
+            return "";
+        }
+        return Buffer.from(response.data.content, "base64").toString("utf8");
     }
-    return undefined;
+    catch {
+        return "";
+    }
+}
+
+;// CONCATENATED MODULE: ./src/trigger.ts
+function shouldRunForTrigger(context, config) {
+    if (config.mode === "always") {
+        if (context.eventName === "issue_comment") {
+            return {
+                shouldRun: false,
+                reason: "Comment events require trigger.mode: comment."
+            };
+        }
+        return { shouldRun: true };
+    }
+    if (config.mode === "label") {
+        const labelName = getNestedString(context.payload, ["label", "name"]);
+        const isLabelEvent = context.eventName === "pull_request_target" || context.eventName === "pull_request";
+        if (isLabelEvent && getNestedString(context.payload, ["action"]) === "labeled" && labelName === config.label) {
+            return { shouldRun: true };
+        }
+        return { shouldRun: false, reason: `Waiting for label '${config.label}'.` };
+    }
+    if (context.eventName !== "issue_comment") {
+        return { shouldRun: false, reason: `Waiting for comment '${config.comment}'.` };
+    }
+    if (!getNestedValue(context.payload, ["issue", "pull_request"])) {
+        return { shouldRun: false, reason: "Comment is not on a pull request." };
+    }
+    const body = getNestedString(context.payload, ["comment", "body"]) ?? "";
+    if (!body.includes(config.comment)) {
+        return { shouldRun: false, reason: `Waiting for comment '${config.comment}'.` };
+    }
+    const authorAssociation = getNestedString(context.payload, [
+        "comment",
+        "author_association"
+    ]);
+    if (!authorAssociation ||
+        !config.allowedCommentAuthorAssociations.includes(authorAssociation)) {
+        return {
+            shouldRun: false,
+            reason: "Comment author is not allowed to trigger PR Checker."
+        };
+    }
+    return { shouldRun: true };
+}
+function getNestedString(payload, path) {
+    const value = getNestedValue(payload, path);
+    return typeof value === "string" ? value : undefined;
+}
+function getNestedValue(payload, path) {
+    let current = payload;
+    for (const part of path) {
+        if (!current || typeof current !== "object" || !(part in current)) {
+            return undefined;
+        }
+        current = current[part];
+    }
+    return current;
 }
 
 ;// CONCATENATED MODULE: ./src/run.ts
@@ -49371,20 +49598,37 @@ function extractOutputText(response) {
 
 
 
+
 async function run() {
     const token = getInput("github-token", { required: true });
-    const apiKey = getInput("openai-api-key", { required: true });
+    const openaiApiKey = getInput("openai-api-key");
+    const anthropicApiKey = getInput("anthropic-api-key");
     const configPath = getInput("config") || ".github/pr-checker.yml";
     const modelOverride = getInput("model");
-    const config = mergeModelOverride(parsePolicyConfig(await readConfig(configPath)), modelOverride);
+    const providerOverride = parseProviderInput(getInput("provider"));
+    const config = mergeModelOverride(parsePolicyConfig(await readConfig(configPath)), modelOverride, providerOverride || undefined);
+    const trigger = shouldRunForTrigger({
+        eventName: github_context.eventName,
+        payload: github_context.payload
+    }, config.trigger);
+    if (!trigger.shouldRun) {
+        info(trigger.reason ?? "PR Checker trigger did not match.");
+        setOutput("skipped", "true");
+        return;
+    }
     const octokit = getOctokit(token);
-    const pr = await getPullRequestContext(octokit);
-    const result = await analyzePullRequest({
-        apiKey,
-        model: config.model.name,
-        pr
+    const pr = await getPullRequestContext(octokit, config.analysis);
+    const result = await analyze_analyzePullRequest({
+        apiKeys: {
+            openai: openaiApiKey || undefined,
+            anthropic: anthropicApiKey || undefined
+        },
+        model: config.model,
+        pr,
+        analysis: config.analysis
     });
     const decision = decideActions(result, config);
+    setOutput("skipped", "false");
     setOutput("score", result.score.toString());
     setOutput("labels", decision.labelsToApply.join(","));
     setOutput("should-close", decision.shouldClose.toString());
@@ -49394,6 +49638,15 @@ async function run() {
         result,
         decision
     });
+}
+function parseProviderInput(value) {
+    if (!value) {
+        return undefined;
+    }
+    if (value === "openai" || value === "anthropic") {
+        return value;
+    }
+    throw new Error("provider must be either 'openai' or 'anthropic'.");
 }
 async function readConfig(path) {
     try {

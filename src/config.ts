@@ -1,12 +1,26 @@
 import { parse } from "yaml";
 import { z } from "zod";
 
-import type { PolicyConfig } from "./types.js";
+import type { ModelConfig, PolicyConfig } from "./types.js";
 
 const defaultConfig: PolicyConfig = {
   model: {
     provider: "openai",
-    name: "gpt-4.1-mini"
+    name: "gpt-5.4-mini-2026-03-17"
+  },
+  trigger: {
+    mode: "always",
+    label: "run-pr-checker",
+    comment: "/pr-check",
+    allowedCommentAuthorAssociations: ["OWNER", "MEMBER", "COLLABORATOR"]
+  },
+  analysis: {
+    depth: "pr",
+    maxFiles: 20,
+    maxPatchCharsPerFile: 4000,
+    maxBaseFileCharsPerFile: 6000,
+    maxFindings: 4,
+    maxReviewFirstFiles: 5
   },
   actions: {
     comment: {
@@ -27,10 +41,45 @@ const configSchema = z
   .object({
     model: z
       .object({
-        provider: z.literal("openai").default(defaultConfig.model.provider),
+        provider: z.enum(["openai", "anthropic"]).default(defaultConfig.model.provider),
         name: z.string().min(1).default(defaultConfig.model.name)
       })
       .default(defaultConfig.model),
+    trigger: z
+      .object({
+        mode: z.enum(["always", "label", "comment"]).default(defaultConfig.trigger.mode),
+        label: z.string().min(1).default(defaultConfig.trigger.label),
+        comment: z.string().min(1).default(defaultConfig.trigger.comment),
+        allowedCommentAuthorAssociations: z
+          .array(z.string().min(1))
+          .default(defaultConfig.trigger.allowedCommentAuthorAssociations)
+      })
+      .default(defaultConfig.trigger),
+    analysis: z
+      .object({
+        depth: z.enum(["pr", "codebase"]).default(defaultConfig.analysis.depth),
+        maxFiles: z.number().int().min(1).max(100).default(defaultConfig.analysis.maxFiles),
+        maxPatchCharsPerFile: z
+          .number()
+          .int()
+          .min(200)
+          .max(50000)
+          .default(defaultConfig.analysis.maxPatchCharsPerFile),
+        maxBaseFileCharsPerFile: z
+          .number()
+          .int()
+          .min(200)
+          .max(50000)
+          .default(defaultConfig.analysis.maxBaseFileCharsPerFile),
+        maxFindings: z.number().int().min(1).max(10).default(defaultConfig.analysis.maxFindings),
+        maxReviewFirstFiles: z
+          .number()
+          .int()
+          .min(1)
+          .max(10)
+          .default(defaultConfig.analysis.maxReviewFirstFiles)
+      })
+      .default(defaultConfig.analysis),
     actions: z
       .object({
         comment: z
@@ -67,8 +116,12 @@ export function parsePolicyConfig(contents: string): PolicyConfig {
   return configSchema.parse(parsed);
 }
 
-export function mergeModelOverride(config: PolicyConfig, modelName?: string): PolicyConfig {
-  if (!modelName) {
+export function mergeModelOverride(
+  config: PolicyConfig,
+  modelName?: string,
+  provider?: ModelConfig["provider"]
+): PolicyConfig {
+  if (!modelName && !provider) {
     return config;
   }
 
@@ -76,7 +129,8 @@ export function mergeModelOverride(config: PolicyConfig, modelName?: string): Po
     ...config,
     model: {
       ...config.model,
-      name: modelName
+      provider: provider ?? config.model.provider,
+      name: modelName ?? config.model.name
     }
   };
 }
