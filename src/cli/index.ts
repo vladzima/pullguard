@@ -5,6 +5,7 @@ import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
 import { buildInitFiles, type InitOptions } from "./templates.js";
+import { buildNextSteps, color, formatBanner } from "./messages.js";
 
 async function main(): Promise<void> {
   const command = process.argv[2];
@@ -25,26 +26,42 @@ async function main(): Promise<void> {
   await writeFile(join(process.cwd(), ".github", "workflows", "pullguard.yml"), files.workflow);
   await writeFile(join(process.cwd(), ".github", "pullguard.yml"), files.policy);
 
-  const secretName = options.provider === "anthropic" ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY";
-  console.log("\nCreated:");
-  console.log("  .github/workflows/pullguard.yml");
-  console.log("  .github/pullguard.yml");
-  console.log("\nAdd your provider key in GitHub:");
-  console.log(`  Settings -> Secrets and variables -> Actions -> New repository secret`);
-  console.log(`  Name: ${secretName}`);
-  console.log("  Value: your provider API key");
+  console.log("");
+  for (const line of buildNextSteps(options)) {
+    console.log(line);
+  }
 }
 
 async function promptForOptions(): Promise<InitOptions> {
   const rl = createInterface({ input, output });
 
   try {
-    const provider = await choose(rl, "Provider", ["openai", "anthropic"], "openai");
-    const trigger = await choose(rl, "Trigger", ["always", "label", "comment"], "comment");
-    const depth = await choose(rl, "Analysis depth", ["pr", "codebase"], "pr");
-    const comment = await confirm(rl, "Post/update PR comment?", true);
-    const labels = await confirm(rl, "Apply risk labels?", true);
-    const close = await confirm(rl, "Allow automatic close?", false);
+    console.log(formatBanner());
+    console.log("");
+    const provider = await choose(
+      rl,
+      "LLM provider",
+      ["openai", "anthropic"],
+      "openai",
+      "Choose the provider whose API key you will add to GitHub Actions secrets."
+    );
+    const trigger = await choose(
+      rl,
+      "When should PullGuard run?",
+      ["always", "label", "comment"],
+      "comment",
+      "`label` means apply `run-pullguard`; `comment` means comment `/pullguard`."
+    );
+    const depth = await choose(
+      rl,
+      "Analysis depth",
+      ["pr", "codebase"],
+      "pr",
+      "`pr` is cheapest; `codebase` also sends capped base-file context."
+    );
+    const comment = await confirm(rl, "Post/update a PR comment with findings?", true);
+    const labels = await confirm(rl, "Apply threshold labels like needs-human-review?", true);
+    const close = await confirm(rl, "Allow automatic close for very high-risk PRs?", false);
     const closeThreshold = close ? await number(rl, "Close threshold", 95) : undefined;
 
     return { provider, trigger, depth, comment, labels, closeThreshold };
@@ -57,8 +74,12 @@ async function choose<T extends string>(
   rl: ReturnType<typeof createInterface>,
   label: string,
   options: T[],
-  fallback: T
+  fallback: T,
+  hint?: string
 ): Promise<T> {
+  if (hint) {
+    console.log(color(`  ${hint}`, "dim"));
+  }
   const answer = await rl.question(`${label} (${options.join("/")}) [${fallback}]: `);
   const value = (answer.trim() || fallback) as T;
   if (!options.includes(value)) {
@@ -100,7 +121,7 @@ async function number(
 }
 
 function printHelp(): void {
-  console.log(`PullGuard
+  console.log(`${formatBanner()}
 
 Usage:
   npx pullguard init
@@ -108,10 +129,17 @@ Usage:
 The init command writes:
   .github/workflows/pullguard.yml
   .github/pullguard.yml
+
+Docs:
+  https://github.com/vladzima/pullguard#readme
 `);
 }
 
-main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-});
+if (process.argv[1]?.endsWith("pullguard") || process.argv[1]?.endsWith("index.js")) {
+  main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
+}
+
+export { buildNextSteps };

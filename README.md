@@ -17,6 +17,8 @@ The CLI writes:
 - `.github/workflows/pullguard.yml`
 - `.github/pullguard.yml`
 
+It also prints the exact next steps for your chosen setup: which GitHub secret to add, whether to apply `run-pullguard` or comment `/pullguard`, and which labels to create.
+
 Manual setup:
 
 Create `.github/workflows/pullguard.yml`:
