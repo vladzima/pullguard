@@ -49378,24 +49378,24 @@ const marker = "<!-- pr-checker -->";
 function formatRiskComment(result) {
     const findings = result.findings.length
         ? result.findings.map(formatFinding).join("\n")
-        : "- No specific high-risk findings were identified.";
+        : "- No specific high-risk findings.";
     const reviewFirstFiles = result.reviewFirstFiles.length
         ? result.reviewFirstFiles.map((file) => `- \`${file}\``).join("\n")
-        : "- No specific file priority suggested.";
+        : "- No specific file priority.";
     return `${marker}
 ## PR Checker
 
-Review risk score: ${result.score}/100
+**Risk: ${result.score}/100 - ${riskBand(result.score)}**
 
 ${result.summary}
 
-### Main concerns
+**Main concerns**
 ${findings}
 
-### Review first
+**Review first**
 ${reviewFirstFiles}
 
-### Suggested maintainer action
+**Suggested action**
 ${result.recommendedAction}
 `;
 }
@@ -49405,6 +49405,15 @@ function getCommentMarker() {
 function formatFinding(finding) {
     const location = finding.file ? ` \`${finding.file}\`` : "";
     return `- **${finding.severity} / ${finding.category}**${location}: ${finding.message}`;
+}
+function riskBand(score) {
+    if (score >= 80) {
+        return "high";
+    }
+    if (score >= 50) {
+        return "medium";
+    }
+    return "low";
 }
 
 ;// CONCATENATED MODULE: ./src/github.ts

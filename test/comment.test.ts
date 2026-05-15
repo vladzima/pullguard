@@ -19,9 +19,34 @@ describe("formatRiskComment", () => {
       recommendedAction: "Request changes before deeper review."
     });
 
-    expect(body).toContain("Review risk score: 88/100");
+    expect(body).toContain("**Risk: 88/100 - high**");
+    expect(body).toContain("**Main concerns**");
+    expect(body).toContain("**Review first**");
+    expect(body).toContain("**Suggested action**");
     expect(body).toContain("src/auth/session.ts");
     expect(body).toContain("Request changes before deeper review.");
     expect(body.toLowerCase()).not.toContain("ai-generated");
+  });
+
+  it("maps risk bands into the visible score line", () => {
+    expect(
+      formatRiskComment({
+        score: 18,
+        summary: "No major review-risk signals found.",
+        findings: [],
+        reviewFirstFiles: [],
+        recommendedAction: "Review normally."
+      })
+    ).toContain("**Risk: 18/100 - low**");
+
+    expect(
+      formatRiskComment({
+        score: 67,
+        summary: "Some review-risk signals found.",
+        findings: [],
+        reviewFirstFiles: [],
+        recommendedAction: "Review carefully."
+      })
+    ).toContain("**Risk: 67/100 - medium**");
   });
 });
