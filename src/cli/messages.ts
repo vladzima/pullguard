@@ -5,33 +5,35 @@ export const docsUrl = "https://github.com/vladzima/pullguard#readme";
 export function buildNextSteps(options: InitOptions, written = true): string[] {
   const secretName = options.provider === "anthropic" ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY";
   const steps = [
-    written ? "Created:" : "Would create:",
-    "  .github/workflows/pullguard.yml",
-    "  .github/pullguard.yml",
+    section("next steps"),
     "",
-    "Add your provider key in GitHub:",
-    "  Settings -> Secrets and variables -> Actions -> New repository secret",
-    `  Name: ${secretName}`,
+    written ? color("Created:", "green") : color("Would create:", "yellow"),
+    `  ${path(".github/workflows/pullguard.yml")}`,
+    `  ${path(".github/pullguard.yml")}`,
+    "",
+    `${color("1.", "dim")} ${color("Add your provider key in GitHub:", "blue")}`,
+    `  ${color("Settings -> Secrets and variables -> Actions -> New repository secret", "dim")}`,
+    `  Name: ${color(secretName, "cyan")}`,
     "  Value: your provider API key",
     ""
   ];
 
   if (options.trigger === "label") {
     steps.push(
-      "Run PullGuard:",
+      `${color("2.", "dim")} ${color("Run PullGuard:", "blue")}`,
       "  Apply the label `run-pullguard` to a pull request.",
       ""
     );
   } else if (options.trigger === "comment") {
     steps.push(
-      "Run PullGuard:",
+      `${color("2.", "dim")} ${color("Run PullGuard:", "blue")}`,
       "  Default run: comment `/pullguard` on a pull request.",
       "  Advanced one-off options are documented in the README.",
       ""
     );
   } else {
     steps.push(
-      "Run PullGuard:",
+      `${color("2.", "dim")} ${color("Run PullGuard:", "blue")}`,
       "  It runs on opened, synchronized, and reopened pull requests.",
       ""
     );
@@ -39,17 +41,17 @@ export function buildNextSteps(options: InitOptions, written = true): string[] {
 
   if (options.labels) {
     steps.push(
-      "Labels:",
+      `${color("3.", "dim")} ${color("Labels:", "blue")}`,
       "  PullGuard creates missing risk labels automatically.",
       ""
     );
   }
 
   steps.push(
-    "Change setup:",
+    color("Change setup:", "blue"),
     "  Re-run `npx pullguard init` to regenerate these files, or edit `.github/pullguard.yml` directly.",
     "",
-    "Remove PullGuard:",
+    color("Remove PullGuard:", "blue"),
     "  Run `npx pullguard uninstall`, or delete `.github/workflows/pullguard.yml` and `.github/pullguard.yml`.",
     ""
   );
@@ -59,49 +61,65 @@ export function buildNextSteps(options: InitOptions, written = true): string[] {
 
 export function buildDryRunOutput(files: { workflow: string; policy: string }): string[] {
   return [
-    "Dry run",
+    section("dry run"),
     "",
-    ".github/workflows/pullguard.yml",
+    path(".github/workflows/pullguard.yml"),
     "```yaml",
     files.workflow.trimEnd(),
     "```",
     "",
-    ".github/pullguard.yml",
+    path(".github/pullguard.yml"),
     "```yaml",
     files.policy.trimEnd(),
     "```",
     "",
-    "No files were written."
+    color("No files were written.", "yellow")
   ];
 }
 
 export function buildUninstallDryRunOutput(): string[] {
   return [
-    "Would remove:",
-    "  .github/workflows/pullguard.yml",
-    "  .github/pullguard.yml",
+    section("remove"),
     "",
-    "No files were removed."
+    color("Would remove:", "yellow"),
+    `  ${path(".github/workflows/pullguard.yml")}`,
+    `  ${path(".github/pullguard.yml")}`,
+    "",
+    color("No files were removed.", "yellow")
   ];
 }
 
 export function formatBanner(): string {
   return [
-    color("PullGuard", "cyan"),
-    "PR review-risk triage for maintainers",
-    "Writes a GitHub Actions workflow and policy file.",
-    `Docs: ${docsUrl}`
+    color("PullGuard", "magenta"),
+    color("PR review-risk triage for maintainers", "bold"),
+    color("Writes a GitHub Actions workflow and policy file.", "dim"),
+    `${color("Docs:", "blue")} ${docsUrl}`
   ].join("\n");
 }
 
-export function color(value: string, name: "cyan" | "green" | "dim" | "bold"): string {
+export function section(value: string): string {
+  return color(value.toUpperCase(), "bold");
+}
+
+export function path(value: string): string {
+  return color(value, "cyan");
+}
+
+export function color(
+  value: string,
+  name: "blue" | "cyan" | "green" | "yellow" | "magenta" | "dim" | "bold"
+): string {
   if (!process.stdout.isTTY) {
     return value;
   }
 
   const codes = {
+    blue: ["\u001b[34m", "\u001b[0m"],
     cyan: ["\u001b[36m", "\u001b[0m"],
     green: ["\u001b[32m", "\u001b[0m"],
+    yellow: ["\u001b[33m", "\u001b[0m"],
+    magenta: ["\u001b[35m", "\u001b[0m"],
     dim: ["\u001b[2m", "\u001b[0m"],
     bold: ["\u001b[1m", "\u001b[0m"]
   } satisfies Record<string, [string, string]>;

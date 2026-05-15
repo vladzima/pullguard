@@ -66,7 +66,7 @@ describe("buildDryRunOutput", () => {
       policy: "model:\n  provider: openai\n"
     }).join("\n");
 
-    expect(output).toContain("Dry run");
+    expect(output).toContain("DRY RUN");
     expect(output).toContain(".github/workflows/pullguard.yml");
     expect(output).toContain("name: PullGuard");
     expect(output).toContain(".github/pullguard.yml");
@@ -79,6 +79,7 @@ describe("buildUninstallDryRunOutput", () => {
   it("lists generated files to remove", () => {
     const output = buildUninstallDryRunOutput().join("\n");
 
+    expect(output).toContain("REMOVE");
     expect(output).toContain("Would remove:");
     expect(output).toContain(".github/workflows/pullguard.yml");
     expect(output).toContain(".github/pullguard.yml");
@@ -104,6 +105,7 @@ describe("buildNextSteps", () => {
     expect(output).toContain("OPENAI_API_KEY");
     expect(output).toContain("Apply the label `run-pullguard`");
     expect(output).toContain("PullGuard creates missing risk labels automatically");
+    expect(output).toContain("NEXT STEPS");
   });
 
   it("explains how to change or remove setup", () => {

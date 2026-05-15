@@ -10,7 +10,8 @@ import {
   buildNextSteps,
   buildUninstallDryRunOutput,
   color,
-  formatBanner
+  formatBanner,
+  section
 } from "./messages.js";
 
 async function main(): Promise<void> {
@@ -35,8 +36,12 @@ async function main(): Promise<void> {
   const options = yes ? getDefaultInitOptions() : await promptForOptions();
   const files = buildInitFiles(options);
 
-  if (dryRun) {
+  if (yes) {
+    console.log(formatBanner());
     console.log("");
+  }
+
+  if (dryRun) {
     for (const line of buildDryRunOutput(files)) {
       console.log(line);
     }
@@ -78,6 +83,8 @@ async function promptForOptions(): Promise<InitOptions> {
   try {
     console.log(formatBanner());
     console.log("");
+    console.log(section("setup"));
+    console.log("");
     const provider = await choose(
       rl,
       "LLM provider",
@@ -118,9 +125,11 @@ async function choose<T extends string>(
   hint?: string
 ): Promise<T> {
   if (hint) {
-    console.log(color(`  ${hint}`, "dim"));
+    console.log(`  ${color("Hint:", "blue")} ${color(hint, "dim")}`);
   }
-  const answer = await rl.question(`${label} (${options.join("/")}) [${fallback}]: `);
+  const answer = await rl.question(
+    `${color("?", "cyan")} ${color(label, "bold")} ${color(`(${options.join("/")})`, "dim")} ${color(`[${fallback}]`, "green")}: `
+  );
   const value = (answer.trim() || fallback) as T;
   if (!options.includes(value)) {
     throw new Error(`${label} must be one of: ${options.join(", ")}`);
@@ -134,7 +143,13 @@ async function confirm(
   fallback: boolean
 ): Promise<boolean> {
   const suffix = fallback ? "Y/n" : "y/N";
-  const answer = (await rl.question(`${label} (${suffix}): `)).trim().toLowerCase();
+  const answer = (
+    await rl.question(
+      `${color("?", "cyan")} ${color(label, "bold")} ${color(`(${suffix})`, "dim")}: `
+    )
+  )
+    .trim()
+    .toLowerCase();
   if (!answer) {
     return fallback;
   }
@@ -152,7 +167,9 @@ async function number(
   label: string,
   fallback: number
 ): Promise<number> {
-  const answer = await rl.question(`${label} [${fallback}]: `);
+  const answer = await rl.question(
+    `${color("?", "cyan")} ${color(label, "bold")} ${color(`[${fallback}]`, "green")}: `
+  );
   const value = Number(answer.trim() || fallback);
   if (!Number.isInteger(value) || value < 0 || value > 100) {
     throw new Error(`${label} must be an integer from 0 to 100.`);
@@ -163,12 +180,14 @@ async function number(
 function printHelp(): void {
   console.log(`${formatBanner()}
 
-Usage:
+${section("usage")}
   npx pullguard init
   npx pullguard init --dry-run
   npx pullguard init --yes --dry-run
   npx pullguard uninstall
   npx pullguard uninstall --dry-run
+
+${section("files")}
 
 The init command writes:
   .github/workflows/pullguard.yml
