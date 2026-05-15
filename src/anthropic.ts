@@ -16,7 +16,7 @@ export async function analyzePullRequestWithAnthropic(params: {
     },
     body: JSON.stringify({
       model: params.model,
-      max_tokens: 900,
+      max_tokens: 700,
       system: `${buildSystemPrompt(params.analysis)} Return valid JSON only. No markdown.`,
       messages: [
         {

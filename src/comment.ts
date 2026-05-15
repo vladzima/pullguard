@@ -23,11 +23,6 @@ ${findings}
 
 **Review first**
 ${reviewFirstFiles}
-
-**Suggested action**
-Audience: PR author.
-
-${result.recommendedAction}
 `;
 }
 

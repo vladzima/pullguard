@@ -62,7 +62,6 @@ export type RiskResult = {
   summary: string;
   findings: RiskFinding[];
   reviewFirstFiles: string[];
-  recommendedAction: string;
 };
 
 export type ActionDecision = {

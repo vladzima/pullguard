@@ -25,7 +25,7 @@ export async function analyzePullRequest(params: {
           content: buildReviewPrompt(params.pr, params.analysis)
         }
       ],
-      max_output_tokens: 900,
+      max_output_tokens: 700,
       text: {
         format: {
           type: "json_schema",

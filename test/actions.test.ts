@@ -8,8 +8,7 @@ const result: RiskResult = {
   score: 82,
   summary: "High review risk.",
   findings: [],
-  reviewFirstFiles: [],
-  recommendedAction: "Request changes before deep review."
+  reviewFirstFiles: []
 };
 
 describe("decideActions", () => {

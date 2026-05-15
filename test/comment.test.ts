@@ -15,17 +15,14 @@ describe("formatRiskComment", () => {
           file: "src/auth/session.ts"
         }
       ],
-      reviewFirstFiles: ["src/auth/session.ts"],
-      recommendedAction: "Add a regression test for the changed authentication flow."
+      reviewFirstFiles: ["src/auth/session.ts"]
     });
 
     expect(body).toContain("**Risk: 88/100 - high**");
     expect(body).toContain("**Main concerns**");
     expect(body).toContain("**Review first**");
-    expect(body).toContain("**Suggested action**");
-    expect(body).toContain("Audience: PR author.");
     expect(body).toContain("src/auth/session.ts");
-    expect(body).toContain("Add a regression test for the changed authentication flow.");
+    expect(body).not.toContain("**Suggested action**");
     expect(body.toLowerCase()).not.toContain("ai-generated");
   });
 
@@ -35,8 +32,7 @@ describe("formatRiskComment", () => {
         score: 18,
         summary: "No major review-risk signals found.",
         findings: [],
-        reviewFirstFiles: [],
-        recommendedAction: "Review normally."
+        reviewFirstFiles: []
       })
     ).toContain("**Risk: 18/100 - low**");
 
@@ -45,8 +41,7 @@ describe("formatRiskComment", () => {
         score: 67,
         summary: "Some review-risk signals found.",
         findings: [],
-        reviewFirstFiles: [],
-        recommendedAction: "Review carefully."
+        reviewFirstFiles: []
       })
     ).toContain("**Risk: 67/100 - medium**");
   });

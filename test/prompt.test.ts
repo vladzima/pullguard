@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildReviewPrompt, buildSystemPrompt } from "../src/prompt.js";
+import { buildReviewPrompt, riskResultSchema } from "../src/prompt.js";
 import type { PullRequestContext } from "../src/types.js";
 
 const pr: PullRequestContext = {
@@ -25,18 +25,9 @@ const pr: PullRequestContext = {
 };
 
 describe("buildReviewPrompt", () => {
-  it("asks for author-facing suggested actions", () => {
-    const prompt = buildSystemPrompt({
-      depth: "pr",
-      maxFiles: 10,
-      maxPatchCharsPerFile: 100,
-      maxBaseFileCharsPerFile: 1000,
-      maxFindings: 4,
-      maxReviewFirstFiles: 5
-    });
-
-    expect(prompt).toContain("suggestion for the PR author");
-    expect(prompt).toContain("do not tell the maintainer");
+  it("does not ask the model for an unused suggested action", () => {
+    expect(riskResultSchema.required).not.toContain("recommendedAction");
+    expect(riskResultSchema.properties).not.toHaveProperty("recommendedAction");
   });
 
   it("keeps PR-depth prompts compact and excludes base file contents", () => {
