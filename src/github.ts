@@ -66,6 +66,12 @@ export async function applyDecision(params: {
   }
 
   if (params.decision.labelsToApply.length > 0) {
+    await ensureLabels(params.octokit, {
+      owner: params.pr.owner,
+      repo: params.pr.repo,
+      labels: params.decision.labelsToApply
+    });
+
     await params.octokit.rest.issues.addLabels({
       owner: params.pr.owner,
       repo: params.pr.repo,
@@ -82,6 +88,51 @@ export async function applyDecision(params: {
       state: "closed"
     });
   }
+}
+
+export async function ensureLabels(
+  octokit: Octokit,
+  params: {
+    owner: string;
+    repo: string;
+    labels: string[];
+  }
+): Promise<void> {
+  await Promise.all(
+    params.labels.map(async (label) => {
+      try {
+        await octokit.rest.issues.getLabel({
+          owner: params.owner,
+          repo: params.repo,
+          name: label
+        });
+      } catch (error) {
+        if (!isNotFoundError(error)) {
+          throw error;
+        }
+
+        await octokit.rest.issues.createLabel({
+          owner: params.owner,
+          repo: params.repo,
+          name: label,
+          color: labelColor(label),
+          description: "PullGuard review-risk label"
+        });
+      }
+    })
+  );
+}
+
+function isNotFoundError(error: unknown): boolean {
+  return Boolean(error && typeof error === "object" && "status" in error && error.status === 404);
+}
+
+function labelColor(label: string): string {
+  if (label.includes("high") || label.includes("risk")) {
+    return "d73a4a";
+  }
+
+  return "f9d0c4";
 }
 
 async function upsertComment(octokit: Octokit, pr: PullRequestContext, body: string): Promise<void> {

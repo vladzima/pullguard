@@ -103,7 +103,7 @@ describe("buildNextSteps", () => {
 
     expect(output).toContain("OPENAI_API_KEY");
     expect(output).toContain("Apply the label `run-pullguard`");
-    expect(output).toContain("Create these labels");
+    expect(output).toContain("PullGuard creates missing risk labels automatically");
   });
 
   it("explains how to change or remove setup", () => {
@@ -150,7 +150,7 @@ describe("buildNextSteps", () => {
     }).join("\n");
 
     expect(output).toContain("ANTHROPIC_API_KEY");
-    expect(output).toContain("Comment `/pullguard`");
-    expect(output).toContain("/pullguard --depth codebase --close 95");
+    expect(output).toContain("Default run: comment `/pullguard`");
+    expect(output).not.toContain("/pullguard --depth codebase --close 95");
   });
 });

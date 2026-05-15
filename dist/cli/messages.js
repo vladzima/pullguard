@@ -16,13 +16,13 @@ export function buildNextSteps(options, written = true) {
         steps.push("Run PullGuard:", "  Apply the label `run-pullguard` to a pull request.", "");
     }
     else if (options.trigger === "comment") {
-        steps.push("Run PullGuard:", "  Comment `/pullguard` on a pull request.", "  Examples:", "    /pullguard --depth pr --comment --labels", "    /pullguard --depth codebase --close 95", "");
+        steps.push("Run PullGuard:", "  Default run: comment `/pullguard` on a pull request.", "  Advanced one-off options are documented in the README.", "");
     }
     else {
         steps.push("Run PullGuard:", "  It runs on opened, synchronized, and reopened pull requests.", "");
     }
     if (options.labels) {
-        steps.push("Create these labels in GitHub if they do not exist yet:", "  needs-human-review", "  high-risk-pr", "");
+        steps.push("Labels:", "  PullGuard creates missing risk labels automatically.", "");
     }
     steps.push("Change setup:", "  Re-run `npx pullguard init` to regenerate these files, or edit `.github/pullguard.yml` directly.", "", "Remove PullGuard:", "  Run `npx pullguard uninstall`, or delete `.github/workflows/pullguard.yml` and `.github/pullguard.yml`.", "");
     return steps;

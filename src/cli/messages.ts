@@ -25,10 +25,8 @@ export function buildNextSteps(options: InitOptions, written = true): string[] {
   } else if (options.trigger === "comment") {
     steps.push(
       "Run PullGuard:",
-      "  Comment `/pullguard` on a pull request.",
-      "  Examples:",
-      "    /pullguard --depth pr --comment --labels",
-      "    /pullguard --depth codebase --close 95",
+      "  Default run: comment `/pullguard` on a pull request.",
+      "  Advanced one-off options are documented in the README.",
       ""
     );
   } else {
@@ -41,9 +39,8 @@ export function buildNextSteps(options: InitOptions, written = true): string[] {
 
   if (options.labels) {
     steps.push(
-      "Create these labels in GitHub if they do not exist yet:",
-      "  needs-human-review",
-      "  high-risk-pr",
+      "Labels:",
+      "  PullGuard creates missing risk labels automatically.",
       ""
     );
   }

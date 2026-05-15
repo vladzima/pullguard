@@ -195,7 +195,13 @@ Comment triggers are restricted by `allowedCommentAuthorAssociations` so random 
 
 ## Comment arguments
 
-Trusted maintainers can override a single comment-triggered run:
+The default comment-triggered run is:
+
+```text
+/pullguard
+```
+
+Trusted maintainers can optionally override a single comment-triggered run:
 
 ```text
 /pullguard --depth pr --comment --labels
@@ -256,6 +262,8 @@ actions:
 ```
 
 With this config, a PR with score `82` gets both `needs-human-review` and `high-risk-pr`.
+
+If a configured output label does not exist yet, PullGuard creates it before applying it.
 
 Close very high-risk PRs:
 
