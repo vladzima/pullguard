@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { buildInitFiles } from "../src/cli/templates.js";
-import { buildDryRunOutput, buildNextSteps, formatBanner } from "../src/cli/messages.js";
+import {
+  buildDryRunOutput,
+  buildNextSteps,
+  buildUninstallDryRunOutput,
+  formatBanner
+} from "../src/cli/messages.js";
 import { getDefaultInitOptions } from "../src/cli/templates.js";
 
 describe("buildInitFiles", () => {
@@ -70,6 +75,17 @@ describe("buildDryRunOutput", () => {
   });
 });
 
+describe("buildUninstallDryRunOutput", () => {
+  it("lists generated files to remove", () => {
+    const output = buildUninstallDryRunOutput().join("\n");
+
+    expect(output).toContain("Would remove:");
+    expect(output).toContain(".github/workflows/pullguard.yml");
+    expect(output).toContain(".github/pullguard.yml");
+    expect(output).toContain("No files were removed.");
+  });
+});
+
 describe("buildNextSteps", () => {
   it("shows the docs link in the banner before setup details", () => {
     expect(formatBanner()).toContain("Docs: https://github.com/vladzima/pullguard#readme");
@@ -88,6 +104,22 @@ describe("buildNextSteps", () => {
     expect(output).toContain("OPENAI_API_KEY");
     expect(output).toContain("Apply the label `run-pullguard`");
     expect(output).toContain("Create these labels");
+  });
+
+  it("explains how to change or remove setup", () => {
+    const output = buildNextSteps({
+      provider: "openai",
+      trigger: "comment",
+      depth: "pr",
+      comment: true,
+      labels: true,
+      closeThreshold: undefined
+    }).join("\n");
+
+    expect(output).toContain("Change setup:");
+    expect(output).toContain("npx pullguard init");
+    expect(output).toContain("Remove PullGuard:");
+    expect(output).toContain("npx pullguard uninstall");
   });
 
   it("does not say files were created during dry-run guidance", () => {

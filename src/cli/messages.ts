@@ -48,6 +48,15 @@ export function buildNextSteps(options: InitOptions, written = true): string[] {
     );
   }
 
+  steps.push(
+    "Change setup:",
+    "  Re-run `npx pullguard init` to regenerate these files, or edit `.github/pullguard.yml` directly.",
+    "",
+    "Remove PullGuard:",
+    "  Run `npx pullguard uninstall`, or delete `.github/workflows/pullguard.yml` and `.github/pullguard.yml`.",
+    ""
+  );
+
   return steps;
 }
 
@@ -66,6 +75,16 @@ export function buildDryRunOutput(files: { workflow: string; policy: string }): 
     "```",
     "",
     "No files were written."
+  ];
+}
+
+export function buildUninstallDryRunOutput(): string[] {
+  return [
+    "Would remove:",
+    "  .github/workflows/pullguard.yml",
+    "  .github/pullguard.yml",
+    "",
+    "No files were removed."
   ];
 }
 

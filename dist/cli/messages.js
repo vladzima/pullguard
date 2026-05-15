@@ -24,6 +24,7 @@ export function buildNextSteps(options, written = true) {
     if (options.labels) {
         steps.push("Create these labels in GitHub if they do not exist yet:", "  needs-human-review", "  high-risk-pr", "");
     }
+    steps.push("Change setup:", "  Re-run `npx pullguard init` to regenerate these files, or edit `.github/pullguard.yml` directly.", "", "Remove PullGuard:", "  Run `npx pullguard uninstall`, or delete `.github/workflows/pullguard.yml` and `.github/pullguard.yml`.", "");
     return steps;
 }
 export function buildDryRunOutput(files) {
@@ -41,6 +42,15 @@ export function buildDryRunOutput(files) {
         "```",
         "",
         "No files were written."
+    ];
+}
+export function buildUninstallDryRunOutput() {
+    return [
+        "Would remove:",
+        "  .github/workflows/pullguard.yml",
+        "  .github/pullguard.yml",
+        "",
+        "No files were removed."
     ];
 }
 export function formatBanner() {

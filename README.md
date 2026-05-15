@@ -25,6 +25,24 @@ The CLI writes:
 
 It also prints the exact next steps for your chosen setup: which GitHub secret to add, whether to apply `run-pullguard` or comment `/pullguard`, and which labels to create.
 
+To change the setup later, either edit `.github/pullguard.yml` directly or rerun:
+
+```bash
+npx pullguard init
+```
+
+To remove PullGuard:
+
+```bash
+npx pullguard uninstall
+```
+
+That removes `.github/workflows/pullguard.yml` and `.github/pullguard.yml`. You can preview removal with:
+
+```bash
+npx pullguard uninstall --dry-run
+```
+
 Manual setup:
 
 Create `.github/workflows/pullguard.yml`:

@@ -1,16 +1,20 @@
 #!/usr/bin/env node
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { buildInitFiles, getDefaultInitOptions } from "./templates.js";
-import { buildDryRunOutput, buildNextSteps, color, formatBanner } from "./messages.js";
+import { buildDryRunOutput, buildNextSteps, buildUninstallDryRunOutput, color, formatBanner } from "./messages.js";
 async function main() {
     const command = process.argv[2];
     const dryRun = process.argv.includes("--dry-run");
     const yes = process.argv.includes("--yes") || process.argv.includes("-y");
     if (!command || command === "--help" || command === "-h") {
         printHelp();
+        return;
+    }
+    if (command === "uninstall") {
+        await uninstall(dryRun);
         return;
     }
     if (command !== "init") {
@@ -33,6 +37,23 @@ async function main() {
     for (const line of buildNextSteps(options, !dryRun)) {
         console.log(line);
     }
+}
+async function uninstall(dryRun) {
+    if (dryRun) {
+        console.log(formatBanner());
+        console.log("");
+        for (const line of buildUninstallDryRunOutput()) {
+            console.log(line);
+        }
+        return;
+    }
+    await rm(join(process.cwd(), ".github", "workflows", "pullguard.yml"), { force: true });
+    await rm(join(process.cwd(), ".github", "pullguard.yml"), { force: true });
+    console.log(formatBanner());
+    console.log("");
+    console.log("Removed:");
+    console.log("  .github/workflows/pullguard.yml");
+    console.log("  .github/pullguard.yml");
 }
 async function promptForOptions() {
     const rl = createInterface({ input, output });
@@ -92,10 +113,14 @@ Usage:
   npx pullguard init
   npx pullguard init --dry-run
   npx pullguard init --yes --dry-run
+  npx pullguard uninstall
+  npx pullguard uninstall --dry-run
 
 The init command writes:
   .github/workflows/pullguard.yml
   .github/pullguard.yml
+
+The uninstall command removes those two generated files.
 `);
 }
 if (process.argv[1]?.endsWith("pullguard") || process.argv[1]?.endsWith("index.js")) {
