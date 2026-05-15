@@ -33,6 +33,7 @@ export function buildSystemPrompt(config: AnalysisConfig): string {
     "Return only the required JSON object.",
     `Keep output short: at most ${config.maxFindings} findings, one sentence per finding, no filler.`,
     `Review-first files must contain at most ${config.maxReviewFirstFiles} paths.`,
+    "The recommendedAction must be one concise suggestion for the PR author about what to change; do not tell the maintainer to approve, reject, close, or request changes.",
     "Prefer concrete evidence from the supplied PR data over speculation."
   ].join(" ");
 }

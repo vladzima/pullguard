@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildReviewPrompt } from "../src/prompt.js";
+import { buildReviewPrompt, buildSystemPrompt } from "../src/prompt.js";
 import type { PullRequestContext } from "../src/types.js";
 
 const pr: PullRequestContext = {
@@ -25,6 +25,20 @@ const pr: PullRequestContext = {
 };
 
 describe("buildReviewPrompt", () => {
+  it("asks for author-facing suggested actions", () => {
+    const prompt = buildSystemPrompt({
+      depth: "pr",
+      maxFiles: 10,
+      maxPatchCharsPerFile: 100,
+      maxBaseFileCharsPerFile: 1000,
+      maxFindings: 4,
+      maxReviewFirstFiles: 5
+    });
+
+    expect(prompt).toContain("suggestion for the PR author");
+    expect(prompt).toContain("do not tell the maintainer");
+  });
+
   it("keeps PR-depth prompts compact and excludes base file contents", () => {
     const prompt = buildReviewPrompt(pr, {
       depth: "pr",

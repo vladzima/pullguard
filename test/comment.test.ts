@@ -16,15 +16,16 @@ describe("formatRiskComment", () => {
         }
       ],
       reviewFirstFiles: ["src/auth/session.ts"],
-      recommendedAction: "Request changes before deeper review."
+      recommendedAction: "Add a regression test for the changed authentication flow."
     });
 
     expect(body).toContain("**Risk: 88/100 - high**");
     expect(body).toContain("**Main concerns**");
     expect(body).toContain("**Review first**");
     expect(body).toContain("**Suggested action**");
+    expect(body).toContain("Audience: PR author.");
     expect(body).toContain("src/auth/session.ts");
-    expect(body).toContain("Request changes before deeper review.");
+    expect(body).toContain("Add a regression test for the changed authentication flow.");
     expect(body.toLowerCase()).not.toContain("ai-generated");
   });
 

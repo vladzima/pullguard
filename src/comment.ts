@@ -25,6 +25,8 @@ ${findings}
 ${reviewFirstFiles}
 
 **Suggested action**
+Audience: PR author.
+
 ${result.recommendedAction}
 `;
 }
