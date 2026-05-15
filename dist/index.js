@@ -44880,6 +44880,8 @@ function buildSystemPrompt(config) {
         "Return only the required JSON object.",
         `Keep output short: at most ${config.maxFindings} findings, one sentence per finding, no filler.`,
         `Review-first files must contain at most ${config.maxReviewFirstFiles} paths.`,
+        "Score calibration: 0-25 means clean, narrow, idiomatic, and meaningfully tested; 25-50 means minor review concerns; 50-75 means review-risky due to weak tests, scope mismatch, over-engineering, convention mismatch, or low-effort implementation; 75-100 means likely maintainer time sink or unsafe to merge.",
+        "Small diffs are not automatically low risk: penalize simple changes that introduce generic abstraction without demonstrated reuse, excessive explanatory comments, unnecessary runtime work, behavior broader than the PR description, or happy-path-only tests.",
         "Prefer concrete evidence from the supplied PR data over speculation."
     ].join(" ");
 }
@@ -44900,8 +44902,9 @@ function buildReviewPrompt(pr, config) {
     return JSON.stringify({
         instructions: {
             depth: config.depth,
-            scoring: "0 means no notable review risk; 100 means likely maintainer time sink or unsafe to merge.",
+            scoring: "0-25 clean and well-tested; 25-50 minor concerns; 50-75 review-risky due to weak tests, scope mismatch, over-engineering, convention mismatch, or low-effort implementation; 75-100 likely maintainer time sink or unsafe to merge.",
             categories: "missing_tests, unrelated_changes, risky_refactor, api_docs_mismatch, dependency_risk, duplicated_logic, weak_test, convention_mismatch, issue_mismatch",
+            riskSignals: "A small diff can be medium risk when it over-engineers a simple change, adds excessive comments, changes behavior beyond the PR description, adds unnecessary hot-path work, or tests only the happy path.",
             outputStyle: "hard structured JSON only; short bullet-ready strings"
         },
         pullRequest: {
