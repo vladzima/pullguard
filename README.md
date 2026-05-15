@@ -100,6 +100,14 @@ The matching API key must be passed to the action. You may pass both keys in the
 - `label`: run only when the configured label is applied.
 - `comment`: run only when an allowed maintainer comments the configured phrase.
 
+With the default config, the manual PR comment is:
+
+```text
+/pr-check
+```
+
+So a maintainer can trigger review by commenting `/pr-check` on the pull request.
+
 Label-triggered review:
 
 ```yaml
@@ -107,6 +115,8 @@ trigger:
   mode: label
   label: run-pr-checker
 ```
+
+With this config, a maintainer triggers review by applying the `run-pr-checker` label to the PR.
 
 Comment-triggered review:
 
@@ -120,7 +130,9 @@ trigger:
     - COLLABORATOR
 ```
 
-Comment triggers are restricted by `allowedCommentAuthorAssociations` so random commenters cannot spend the repository's BYOK credits.
+With this config, a maintainer triggers review by commenting `/pr-check` on the PR.
+
+Comment triggers are restricted by `allowedCommentAuthorAssociations` so random commenters cannot spend the repository's BYOK credits. To use comment triggers, keep the `issue_comment` event in `.github/workflows/pr-checker.yml`. To use label triggers, keep `labeled` in the `pull_request_target` event types.
 
 ## Analysis Depth
 
@@ -136,6 +148,54 @@ Both modes keep output compact through `maxFindings` and `maxReviewFirstFiles`.
 `comment`, `labels`, and `close` are separate choices. You can run observe-only by disabling all three, comment without labels, label without comments, or opt into automatic closing for very high-risk PRs.
 
 Automatic closing is disabled by default because false positives are costly in public OSS.
+
+Post or update a PR comment:
+
+```yaml
+actions:
+  comment:
+    enabled: true
+```
+
+Apply labels when score thresholds are met:
+
+```yaml
+actions:
+  labels:
+    enabled: true
+    rules:
+      - threshold: 60
+        label: needs-human-review
+      - threshold: 80
+        label: high-risk-pr
+```
+
+With this config, a PR with score `82` gets both `needs-human-review` and `high-risk-pr`.
+
+Close very high-risk PRs:
+
+```yaml
+actions:
+  close:
+    enabled: true
+    threshold: 95
+```
+
+With this config, PR Checker closes the PR only when the score is at least `95`.
+
+Observe-only mode:
+
+```yaml
+actions:
+  comment:
+    enabled: false
+  labels:
+    enabled: false
+  close:
+    enabled: false
+```
+
+Observe-only mode still computes outputs for later workflow steps, but it does not modify the PR.
 
 ## Security Note
 
